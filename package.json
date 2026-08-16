@@ -1,6 +1,6 @@
 {
   "name": "dsh-projects",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "description": "Project-oriented workspace and session management for DeepSeek Harness.",
   "type": "module",
   "main": "./src/index.js",
@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "build": "node build.mjs",
-    "check": "node --check src/client.cjs && node --check src/index.js && node --check src/native-bridge.js && node --check src/core/default-workspace.cjs",
+    "check": "node --check src/client.cjs && node --check src/index.js && node --check src/native-bridge.js && node --check src/core/default-workspace.cjs && node --check src/core/native-picker-result.cjs",
     "test": "node --test",
     "verify": "npm run check && npm run build && npm test",
     "prepack": "npm run verify"

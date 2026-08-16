@@ -1,6 +1,7 @@
     const React = require("react");
     const ReactDOM = require("react-dom");
     const { createDefaultWorkspaceManager } = require("./core/default-workspace.cjs");
+    const { unwrapNativeDirectoryResult } = require("./core/native-picker-result.cjs");
     const h = React.createElement;
 
     const NS = "dsh-projects";
@@ -1384,8 +1385,7 @@
         if (ctx.connection?.isLoopback && ctx.connection?.rpc?.call) {
           try {
             const result = await ctx.connection.rpc.call("/dsh-projects", "pickDirectory", {});
-            if (result && (typeof result.path === "string" || result.path === null)) return result.path;
-            throw new Error("native bridge returned an invalid directory result");
+            return unwrapNativeDirectoryResult(result);
           } catch (reason) {
             console.warn("[dsh-projects] native directory bridge unavailable; falling back", reason);
           }

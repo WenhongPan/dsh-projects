@@ -55,8 +55,19 @@ function createNativeBridgeHandler(internals = {}) {
     if (!isPlainObject(payload) || Object.keys(payload).length !== 0) {
       throw new Error("dsh-projects: pickDirectory payload must be an empty object");
     }
-    const path = await pickNativeDirectory(signal, internals);
-    return { path };
+    try {
+      const path = await pickNativeDirectory(signal, internals);
+      return { ok: true, value: { path } };
+    } catch (reason) {
+      return {
+        ok: false,
+        error: {
+          code: "internal",
+          message: reason instanceof Error ? reason.message : String(reason),
+          details: {}
+        }
+      };
+    }
   };
 }
 

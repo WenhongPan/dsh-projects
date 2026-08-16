@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented here.
 
+## 0.2.0-alpha.2 - 2026-08-17
+
+- Fix the Desktop native picker opening a second fallback chooser after a folder was selected.
+- Preserve the exact selected folder as the project workspace root.
+- Add regression coverage for Connection RPC result envelopes and picker cancellation.
+
 ## 0.2.0-alpha.1 - 2026-08-17
 
 - Add a loopback-only native directory picker bridge.

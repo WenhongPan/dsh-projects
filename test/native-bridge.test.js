@@ -62,7 +62,10 @@ test("bridge accepts only its empty pickDirectory request", async () => {
     electron: false,
     loadNativePicker: async () => ({ pickNativeDirectory: async () => "/tmp/project" })
   });
-  assert.deepEqual(await handler("pickDirectory", {}, new AbortController().signal), { path: "/tmp/project" });
+  assert.deepEqual(await handler("pickDirectory", {}, new AbortController().signal), {
+    ok: true,
+    value: { path: "/tmp/project" }
+  });
   await assert.rejects(() => handler("other", {}, new AbortController().signal), /unknown native bridge endpoint/);
   await assert.rejects(() => handler("pickDirectory", { path: "/tmp" }, new AbortController().signal), /empty object/);
 });
