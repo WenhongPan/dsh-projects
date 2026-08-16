@@ -2,7 +2,7 @@
 
 [English](README.en.md) · 简体中文
 
-面向 DeepSeek Harness 的项目式 Workspace/Session 管理插件。界面设计受到 Codex 项目体验启发，但本项目不是 DeepSeek、DSH Desktop、OpenAI 或 Codex 的官方产品。
+面向 DeepSeek Harness 的项目式 Workspace/Session 管理插件。
 
 > 状态：`0.1.0-alpha.1`。目前仅在 Windows x64、DSH Desktop 2.0.0、DeepSeek Harness 0.1.0-rc.6 上进行过人工使用；其他平台仍需验证。
 

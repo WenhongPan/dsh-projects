@@ -2,7 +2,7 @@
 
 English · [简体中文](README.md)
 
-Project-oriented Workspace and Session management for DeepSeek Harness. The interaction design is inspired by Codex projects, but this is not an official product of DeepSeek, DSH Desktop, OpenAI, or Codex.
+Project-oriented Workspace and Session management for DeepSeek Harness.
 
 > Status: `0.1.0-alpha.1`. Manually used on Windows x64 with DSH Desktop 2.0.0 and DeepSeek Harness 0.1.0-rc.6. Other platforms are not verified yet.
 
