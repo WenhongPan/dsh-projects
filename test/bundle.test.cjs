@@ -26,5 +26,5 @@ test("browser bundle registers a DSH client module", () => {
   });
   assert.equal(plugin.name, "dsh-projects");
   assert.equal(typeof plugin.apply, "function");
-  assert.deepEqual(Array.from(plugin.inject), ["slots", "locale", "sessions", "workspaces"]);
+  assert.deepEqual(Array.from(plugin.inject), ["slots", "locale", "sessions", "workspaces", "connection"]);
 });

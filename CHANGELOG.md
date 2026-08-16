@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented here.
 
+## 0.2.0-alpha.1 - 2026-08-17
+
+- Add a loopback-only native directory picker bridge.
+- Use Electron's OS chooser inside DSH Desktop without replacing the Desktop package.
+- Use DSH's official cross-platform native picker for ordinary local Web hosts.
+- Preserve the existing in-app directory browser as the remote and failure fallback.
+- Document the alternative patched-Desktop distribution.
+
 ## 0.1.0-alpha.1 - 2026-08-17
 
 - Initial public-alpha repository layout.

@@ -4,14 +4,14 @@ English · [简体中文](README.md)
 
 Project-oriented Workspace and Session management for DeepSeek Harness.
 
-> Status: `0.1.0-alpha.1`. Manually used on Windows x64 with DSH Desktop 2.0.0 and DeepSeek Harness 0.1.0-rc.6. Other platforms are not verified yet.
+> Status: `0.2.0-alpha.1`. Windows x64 with DSH Desktop 2.0.1 and DeepSeek Harness 0.1.0-rc.6 is the primary verification target. Native pickers on other platforms still need manual coverage.
 
 ## Highlights
 
 - Searchable project picker above the new-session composer.
 - Start without choosing a project; allocate `~/Documents/DSH-Default/YYYY-MM-DD/new-chat[-N]` automatically.
 - Create a project with an independent display name and source directory.
-- Fall back to an in-app directory browser when the native picker is unavailable.
+- Prefer an OS directory chooser for local Desktop and local Web sessions, then fall back to the in-app browser.
 - Project-grouped and flat sidebar layouts with a separate Recent section.
 - Project/chat pinning, project favorites, and manual drag ordering.
 - Hover summaries for projects and chats.
@@ -29,6 +29,15 @@ dsh plugin --profile web add link:/path/to/dsh-projects
 ```
 
 For DSH Desktop, use `--profile desktop`. Restart the selected profile after installation or upgrade.
+
+## Directory picker options
+
+The repository supports two deployment choices:
+
+1. **Plugin native bridge (default):** ships with `dsh-projects` and does not replace Desktop. Its RPC endpoint accepts loopback pages only. Desktop uses Electron's OS chooser; ordinary local Web uses DSH's cross-platform native picker. Failures and remote pages fall back to the in-app browser.
+2. **Patched Desktop build:** restores composition of DSH's official native picker, benefiting every compatible plugin that calls `ctx.workspaces.pickDirectory()`. See [native picker options](docs/native-picker-options.md) for the installer and upstream PR status.
+
+“Local Web” means that the browser reaches DSH through `localhost`, `127.0.0.1`, or `::1` on the same computer. A remote browser never opens a chooser on the Host machine through this bridge.
 
 ## Development
 
