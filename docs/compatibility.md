@@ -34,4 +34,4 @@ In remote Web UI, project paths always refer to the filesystem of the machine ru
 
 ## Version policy
 
-`0.2.0-alpha.2` targets DeepSeek Harness `0.1.0-rc.6` and DSH Desktop 2.0.1. Compatibility with later Developer Preview builds is recorded only after tests and, for OS integrations, manual verification.
+`0.3.0-alpha.1` targets DeepSeek Harness `0.1.0-rc.6` and DSH Desktop 2.0.1. Compatibility with later Developer Preview builds is recorded only after tests and, for OS integrations, manual verification.

@@ -1,20 +1,39 @@
-# dsh-projects
+<p align="center">
+  <img src="docs/assets/social-preview.png" alt="dsh-projects：为 DeepSeek Harness 提供项目化工作流">
+</p>
 
-[English](README.en.md) · 简体中文
+<h1 align="center">dsh-projects</h1>
 
-> 把 DeepSeek Harness 零散的 Workspace 和会话，整理成可搜索、可排序的项目。
+<p align="center"><strong>把零散的 Workspace 和会话，变成真正清晰、可搜索的项目工作流。</strong></p>
 
-[![Release](https://img.shields.io/github/v/release/WenhongPan/dsh-projects?include_prereleases&label=release)](https://github.com/WenhongPan/dsh-projects/releases/latest)
-[![CI](https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml/badge.svg)](https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/WenhongPan/dsh-projects)](LICENSE)
+<p align="center">
+  <a href="README.en.md">English</a> · 简体中文<br>
+  <a href="https://github.com/WenhongPan/dsh-projects/releases/latest"><img src="https://img.shields.io/github/v/release/WenhongPan/dsh-projects?include_prereleases&label=release" alt="Release"></a>
+  <a href="https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml"><img src="https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/WenhongPan/dsh-projects" alt="License"></a>
+</p>
 
-![dsh-projects：为 DeepSeek Harness 提供项目化工作流](docs/assets/social-preview.png)
+<p align="center">
+  <a href="#快速安装">快速安装</a> ·
+  <a href="#一眼看懂">功能总览</a> ·
+  <a href="#兼容性">兼容性</a> ·
+  <a href="https://github.com/WenhongPan/dsh-projects/issues/new?template=bug.yml">报告问题</a>
+</p>
 
 ![dsh-projects：选择项目、创建项目并打开 Windows 原生目录窗口](docs/assets/demo.gif)
 
-> 全屏真实录制：目录窗口由 Windows 原生接口直接打开；画面仅做裁切、镜头缩放和 GIF 压缩，没有重绘系统界面。
+<sub>全屏真实录制：目录窗口由 Windows 原生接口直接打开；画面仅做裁切、镜头缩放和 GIF 压缩，没有重绘系统界面。</sub>
 
 DSH 原生界面擅长直接进入 Workspace，但项目多起来以后，目录选择和会话列表很快会变得混乱。`dsh-projects` 在 DSH 原生 Workspace/Session 数据之上增加一层项目体验：选择项目、创建项目、整理侧边栏、搜索聊天和查看归档内容，不复制或迁移已有会话。
+
+### v0.3 新增
+
+- **多文件夹项目**：把多个现有 Workspace 组合为一个项目，并明确指定新会话使用的主文件夹。
+- **待处理摘要**：关闭、简洁数字或展开列表三种模式，直接看到等待输入、运行中和已完成的会话。
+- **更好用的搜索**：项目、标题和聊天正文结果直接按项目分组，命中文字清晰高亮。
+- **更顺手的目录窗口**：记住上次位置，也可固定从桌面、用户主目录或当前项目父目录开始。
+
+所有高级能力均为可选项；不启用时仍然是轻量的 Workspace/Session 整理层。
 
 ## 一眼看懂
 
@@ -36,18 +55,18 @@ DSH 原生界面擅长直接进入 Workspace，但项目多起来以后，目录
 
 ## 快速安装
 
-当前版本为 `0.2.0-alpha.2`，主要验证环境是 Windows x64、DSH Desktop 2.0.1 和 DeepSeek Harness 0.1.0-rc.6。
+当前版本为 `0.3.0-alpha.1`，主要验证环境是 Windows x64、DSH Desktop 2.0.1 和 DeepSeek Harness 0.1.0-rc.6。
 
 ### DSH Desktop
 
 ```powershell
-dsh plugin --profile desktop add https://github.com/WenhongPan/dsh-projects/releases/download/v0.2.0-alpha.2/dsh-projects-0.2.0-alpha.2.tgz
+dsh plugin --profile desktop add https://github.com/WenhongPan/dsh-projects/releases/download/v0.3.0-alpha.1/dsh-projects-0.3.0-alpha.1.tgz
 ```
 
 ### DSH Web UI
 
 ```bash
-dsh plugin --profile web add https://github.com/WenhongPan/dsh-projects/releases/download/v0.2.0-alpha.2/dsh-projects-0.2.0-alpha.2.tgz
+dsh plugin --profile web add https://github.com/WenhongPan/dsh-projects/releases/download/v0.3.0-alpha.1/dsh-projects-0.3.0-alpha.1.tgz
 ```
 
 安装或升级后，完整退出并重新启动对应的 DSH profile。Desktop 和 Web 是两个独立 profile，需要分别安装。
@@ -129,6 +148,8 @@ npm pack --dry-run
 这是 Alpha 版本。遇到问题可以提交[缺陷报告](https://github.com/WenhongPan/dsh-projects/issues/new?template=bug.yml)，也欢迎填写[平台兼容性报告](https://github.com/WenhongPan/dsh-projects/issues/new?template=compatibility.yml)或提出[功能建议](https://github.com/WenhongPan/dsh-projects/issues/new?template=feature.yml)。提交前请移除私密路径、提示词和凭据。
 
 贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)，后续方向见[公开路线图](docs/roadmap.md)。
+
+如果 `dsh-projects` 解决了你的 Workspace 或侧边栏整理问题，欢迎点一个 **Star**。它能帮助更多 DSH 用户发现这个项目；实际平台反馈也会直接决定下一版优先修复什么。
 
 ## 许可证
 

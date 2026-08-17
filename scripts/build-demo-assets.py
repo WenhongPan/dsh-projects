@@ -66,11 +66,11 @@ def build_social_preview(
     draw.rounded_rectangle((58, 58, 188, 91), radius=16, fill=(36, 52, 79, 235))
     draw.text((79, 65), "DSH PLUGIN", font=font(15, bold=True), fill="#b7d1ff")
     draw.text((58, 132), "dsh-projects", font=font(52, bold=True), fill="#f7f9fc")
-    draw.text((60, 214), "Projects that stay", font=font(29, bold=True), fill="#e3e9f3")
+    draw.text((60, 214), "Workspaces, finally", font=font(29, bold=True), fill="#e3e9f3")
     draw.text((60, 252), "organized.", font=font(29, bold=True), fill="#8bb7ff")
     draw.multiline_text(
         (60, 323),
-        "Searchable sessions\nNative folder picking\nA project-first sidebar",
+        "Multi-folder projects\nSession status at a glance\nNative folder picking",
         font=font(20),
         fill="#b8c2d1",
         spacing=16,
