@@ -1,6 +1,6 @@
 {
   "name": "dsh-projects",
-  "version": "0.2.0-alpha.2",
+  "version": "0.3.0-alpha.1",
   "description": "Project and session management, searchable sessions, native folder picking, and sidebar organization for DeepSeek Harness.",
   "type": "module",
   "main": "./src/index.js",

@@ -1,20 +1,39 @@
-# dsh-projects
+<p align="center">
+  <img src="docs/assets/social-preview.png" alt="dsh-projects: a project-first workflow for DeepSeek Harness">
+</p>
 
-English · [简体中文](README.md)
+<h1 align="center">dsh-projects</h1>
 
-> Turn DeepSeek Harness workspaces and sessions into searchable, organized projects.
+<p align="center"><strong>Turn scattered Workspaces and sessions into a clear, searchable project workflow.</strong></p>
 
-[![Release](https://img.shields.io/github/v/release/WenhongPan/dsh-projects?include_prereleases&label=release)](https://github.com/WenhongPan/dsh-projects/releases/latest)
-[![CI](https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml/badge.svg)](https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/WenhongPan/dsh-projects)](LICENSE)
+<p align="center">
+  English · <a href="README.md">简体中文</a><br>
+  <a href="https://github.com/WenhongPan/dsh-projects/releases/latest"><img src="https://img.shields.io/github/v/release/WenhongPan/dsh-projects?include_prereleases&label=release" alt="Release"></a>
+  <a href="https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml"><img src="https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/WenhongPan/dsh-projects" alt="License"></a>
+</p>
 
-![dsh-projects: a project-first workflow for DeepSeek Harness](docs/assets/social-preview.png)
+<p align="center">
+  <a href="#quick-install">Quick install</a> ·
+  <a href="#at-a-glance">Feature tour</a> ·
+  <a href="#compatibility">Compatibility</a> ·
+  <a href="https://github.com/WenhongPan/dsh-projects/issues/new?template=bug.yml">Report a bug</a>
+</p>
 
 ![dsh-projects project picker, create-project dialog, and native Windows folder picker](docs/assets/demo.gif)
 
-> Full-screen, real interaction capture. The directory chooser is opened by the Windows native API; editing is limited to cropping, camera zoom, and GIF compression—no system UI was reconstructed.
+<sub>Full-screen, real interaction capture. The directory chooser is opened by the Windows native API; editing is limited to cropping, camera zoom, and GIF compression—no system UI was reconstructed.</sub>
 
 DSH makes it easy to enter a Workspace, but folder selection and a flat session list become difficult to navigate as your work grows. `dsh-projects` adds a project layer over DSH's native Workspace and Session data: select and create projects, organize the sidebar, search chats, and inspect archived work without copying or migrating existing sessions.
+
+### New in v0.3
+
+- **Multi-folder projects:** group existing Workspaces and choose an explicit primary folder for new sessions.
+- **Attention summaries:** use Off, Compact, or Expanded views for waiting, running, and completed sessions.
+- **Better search:** group project, title, and chat-body matches directly under their projects with highlighted snippets.
+- **Smarter folder picking:** remember the previous location or start from Desktop, Home, or the current project's parent.
+
+Every advanced capability is opt-in. Without it, the plugin remains a lightweight organization layer over DSH data.
 
 ## At a glance
 
@@ -36,18 +55,18 @@ DSH makes it easy to enter a Workspace, but folder selection and a flat session 
 
 ## Quick install
 
-The current version is `0.2.0-alpha.2`. Windows x64 with DSH Desktop 2.0.1 and DeepSeek Harness 0.1.0-rc.6 is the primary verified environment.
+The current version is `0.3.0-alpha.1`. Windows x64 with DSH Desktop 2.0.1 and DeepSeek Harness 0.1.0-rc.6 is the primary verified environment.
 
 ### DSH Desktop
 
 ```powershell
-dsh plugin --profile desktop add https://github.com/WenhongPan/dsh-projects/releases/download/v0.2.0-alpha.2/dsh-projects-0.2.0-alpha.2.tgz
+dsh plugin --profile desktop add https://github.com/WenhongPan/dsh-projects/releases/download/v0.3.0-alpha.1/dsh-projects-0.3.0-alpha.1.tgz
 ```
 
 ### DSH Web UI
 
 ```bash
-dsh plugin --profile web add https://github.com/WenhongPan/dsh-projects/releases/download/v0.2.0-alpha.2/dsh-projects-0.2.0-alpha.2.tgz
+dsh plugin --profile web add https://github.com/WenhongPan/dsh-projects/releases/download/v0.3.0-alpha.1/dsh-projects-0.3.0-alpha.1.tgz
 ```
 
 Fully quit and restart the selected DSH profile after installation or upgrade. Desktop and Web are separate profiles and must be installed independently.
@@ -127,6 +146,8 @@ npm pack --dry-run
 This is an alpha. Use the structured forms to report a [bug](https://github.com/WenhongPan/dsh-projects/issues/new?template=bug.yml), share a [platform compatibility result](https://github.com/WenhongPan/dsh-projects/issues/new?template=compatibility.yml), or propose a [feature](https://github.com/WenhongPan/dsh-projects/issues/new?template=feature.yml). Remove private paths, prompts, and credentials before submitting.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance, [CHANGELOG.md](CHANGELOG.md) for release history, and the public [roadmap](docs/roadmap.md) for possible next steps.
+
+If `dsh-projects` makes your Workspace or sidebar workflow easier, consider leaving a **Star**. It helps other DSH users discover the project, while real compatibility reports directly shape the next release.
 
 ## License
 

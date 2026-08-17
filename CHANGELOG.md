@@ -4,6 +4,8 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+## 0.3.0-alpha.1 - 2026-08-18
+
 - Add Arrow Up/Down and Enter navigation to the project picker, including active-option accessibility metadata.
 - Add structured bug, compatibility, and feature-request forms plus a public product roadmap.
 - Start the Desktop native directory chooser on the system Desktop, then remember the last selected folder's parent and safely fall back when it no longer exists.
