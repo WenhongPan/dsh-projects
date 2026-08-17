@@ -146,11 +146,30 @@ var require_native_picker_result = __commonJS({
   }
 });
 
+// src/core/project-picker.cjs
+var require_project_picker = __commonJS({
+  "src/core/project-picker.cjs"(exports2, module2) {
+    function initialProjectIndex2(projects, selectedId) {
+      if (!Array.isArray(projects) || projects.length === 0) return -1;
+      const selected = projects.findIndex((project) => project?.workspaceId === selectedId);
+      return selected >= 0 ? selected : 0;
+    }
+    function nextProjectIndex2(current, direction, length) {
+      if (!Number.isInteger(length) || length <= 0) return -1;
+      const step = direction < 0 ? -1 : 1;
+      const start = Number.isInteger(current) && current >= 0 && current < length ? current : step > 0 ? -1 : 0;
+      return (start + step + length) % length;
+    }
+    module2.exports = { initialProjectIndex: initialProjectIndex2, nextProjectIndex: nextProjectIndex2 };
+  }
+});
+
 // src/client.cjs
 var React = require("react");
 var ReactDOM = require("react-dom");
 var { createDefaultWorkspaceManager, unwrapDefaultWorkspaceResult } = require_default_workspace();
 var { unwrapNativeDirectoryResult } = require_native_picker_result();
+var { initialProjectIndex, nextProjectIndex } = require_project_picker();
 var h = React.createElement;
 var NS = "dsh-projects";
 var dictionaries = {
@@ -328,7 +347,7 @@ var css = `
       .dshp-search input::placeholder{color:var(--dshp-text-3)}
       .dshp-list{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:2px}
       .dshp-project-item,.dshp-new-item{box-sizing:border-box;width:100%;height:36px;border:0;border-radius:9px;background:transparent;color:inherit;display:flex;align-items:center;gap:10px;padding:0 9px;text-align:left;font:inherit;font-size:14px;cursor:pointer}
-      .dshp-project-item:hover,.dshp-project-item[data-selected=true],.dshp-new-item:hover{background:var(--dshp-selected)}
+      .dshp-project-item:hover,.dshp-project-item[data-selected=true],.dshp-project-item[data-active=true],.dshp-new-item:hover{background:var(--dshp-selected)}
       .dshp-project-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .dshp-default-item{height:auto;min-height:48px;align-items:flex-start;padding-top:7px;padding-bottom:7px}
       .dshp-default-copy{min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -773,6 +792,7 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
   const [defaultBusy, setDefaultBusy] = React.useState(false);
   const [defaultError, setDefaultError] = React.useState("");
   const [position, setPosition] = React.useState({ left: 12, top: 12 });
+  const [activeIndex, setActiveIndex] = React.useState(-1);
   const searchRef = React.useRef(null);
   const updatePosition = React.useCallback(() => {
     const rect = anchorRef?.current?.getBoundingClientRect();
@@ -823,7 +843,22 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
   };
   const ordered = React.useMemo(() => [...projects].sort((a, b) => projectUpdatedAt(b, sessionState) - projectUpdatedAt(a, sessionState) || a.title.localeCompare(b.title)), [projects, sessionState]);
   const needle = query.trim().toLowerCase();
-  const filtered = needle ? ordered.filter((project) => project.title.toLowerCase().includes(needle) || project.path.toLowerCase().includes(needle)) : ordered;
+  const filtered = React.useMemo(() => needle ? ordered.filter((project) => project.title.toLowerCase().includes(needle) || project.path.toLowerCase().includes(needle)) : ordered, [needle, ordered]);
+  React.useEffect(() => {
+    if (!open) return setActiveIndex(-1);
+    setActiveIndex(initialProjectIndex(filtered, selectedId));
+  }, [open, filtered, selectedId]);
+  const handleSearchKey = (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((current) => nextProjectIndex(current, event.key === "ArrowUp" ? -1 : 1, filtered.length));
+      return;
+    }
+    if (event.key === "Enter" && activeIndex >= 0 && filtered[activeIndex]) {
+      event.preventDefault();
+      onPick(filtered[activeIndex].workspaceId);
+    }
+  };
   const menu = open && !modalOpen ? ReactDOM.createPortal(
     h(
       "div",
@@ -832,17 +867,33 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
         "div",
         { className: "dshp-search" },
         h(Icon, { name: "search", size: 17 }),
-        h("input", { ref: searchRef, value: query, placeholder: t("searchProjects"), onChange: (event) => setQuery(event.target.value), "aria-label": t("searchProjects") })
+        h("input", {
+          ref: searchRef,
+          value: query,
+          placeholder: t("searchProjects"),
+          onChange: (event) => setQuery(event.target.value),
+          onKeyDown: handleSearchKey,
+          role: "combobox",
+          "aria-label": t("searchProjects"),
+          "aria-controls": "dshp-project-options",
+          "aria-expanded": true,
+          "aria-activedescendant": activeIndex >= 0 ? `dshp-project-option-${activeIndex}` : void 0
+        })
       ),
       h(
         "div",
-        { className: "dshp-list" },
-        filtered.length ? filtered.map((project) => h("button", {
+        { id: "dshp-project-options", className: "dshp-list", role: "listbox" },
+        filtered.length ? filtered.map((project, index) => h("button", {
           key: project.workspaceId,
+          id: `dshp-project-option-${index}`,
           type: "button",
           className: "dshp-project-item",
+          role: "option",
+          "aria-selected": project.workspaceId === selectedId,
           "data-selected": project.workspaceId === selectedId ? "true" : "false",
+          "data-active": index === activeIndex ? "true" : "false",
           title: project.path,
+          onMouseEnter: () => setActiveIndex(index),
           onClick: () => onPick(project.workspaceId)
         }, h(Icon, { name: "folder", size: 18 }), h("span", null, project.title))) : h("div", { className: "dshp-menu-empty" }, projects.length ? t("noMatches") : t("noProjects"))
       ),

@@ -2,6 +2,7 @@
     const ReactDOM = require("react-dom");
     const { createDefaultWorkspaceManager, unwrapDefaultWorkspaceResult } = require("./core/default-workspace.cjs");
     const { unwrapNativeDirectoryResult } = require("./core/native-picker-result.cjs");
+    const { initialProjectIndex, nextProjectIndex } = require("./core/project-picker.cjs");
     const h = React.createElement;
 
     const NS = "dsh-projects";
@@ -181,7 +182,7 @@
       .dshp-search input::placeholder{color:var(--dshp-text-3)}
       .dshp-list{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:2px}
       .dshp-project-item,.dshp-new-item{box-sizing:border-box;width:100%;height:36px;border:0;border-radius:9px;background:transparent;color:inherit;display:flex;align-items:center;gap:10px;padding:0 9px;text-align:left;font:inherit;font-size:14px;cursor:pointer}
-      .dshp-project-item:hover,.dshp-project-item[data-selected=true],.dshp-new-item:hover{background:var(--dshp-selected)}
+      .dshp-project-item:hover,.dshp-project-item[data-selected=true],.dshp-project-item[data-active=true],.dshp-new-item:hover{background:var(--dshp-selected)}
       .dshp-project-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .dshp-default-item{height:auto;min-height:48px;align-items:flex-start;padding-top:7px;padding-bottom:7px}
       .dshp-default-copy{min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -613,6 +614,7 @@
       const [defaultBusy, setDefaultBusy] = React.useState(false);
       const [defaultError, setDefaultError] = React.useState("");
       const [position, setPosition] = React.useState({ left: 12, top: 12 });
+      const [activeIndex, setActiveIndex] = React.useState(-1);
       const searchRef = React.useRef(null);
 
       const updatePosition = React.useCallback(() => {
@@ -661,22 +663,55 @@
 
       const ordered = React.useMemo(() => [...projects].sort((a, b) => projectUpdatedAt(b, sessionState) - projectUpdatedAt(a, sessionState) || a.title.localeCompare(b.title)), [projects, sessionState]);
       const needle = query.trim().toLowerCase();
-      const filtered = needle ? ordered.filter((project) => project.title.toLowerCase().includes(needle) || project.path.toLowerCase().includes(needle)) : ordered;
+      const filtered = React.useMemo(() => needle ? ordered.filter((project) => project.title.toLowerCase().includes(needle) || project.path.toLowerCase().includes(needle)) : ordered, [needle, ordered]);
+
+      React.useEffect(() => {
+        if (!open) return setActiveIndex(-1);
+        setActiveIndex(initialProjectIndex(filtered, selectedId));
+      }, [open, filtered, selectedId]);
+
+      const handleSearchKey = (event) => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          setActiveIndex((current) => nextProjectIndex(current, event.key === "ArrowUp" ? -1 : 1, filtered.length));
+          return;
+        }
+        if (event.key === "Enter" && activeIndex >= 0 && filtered[activeIndex]) {
+          event.preventDefault();
+          onPick(filtered[activeIndex].workspaceId);
+        }
+      };
 
       const menu = open && !modalOpen ? ReactDOM.createPortal(
         h("div", { className: "dshp-menu", style: position, role: "menu" },
           h("div", { className: "dshp-search" },
             h(Icon, { name: "search", size: 17 }),
-            h("input", { ref: searchRef, value: query, placeholder: t("searchProjects"), onChange: (event) => setQuery(event.target.value), "aria-label": t("searchProjects") })
+            h("input", {
+              ref: searchRef,
+              value: query,
+              placeholder: t("searchProjects"),
+              onChange: (event) => setQuery(event.target.value),
+              onKeyDown: handleSearchKey,
+              role: "combobox",
+              "aria-label": t("searchProjects"),
+              "aria-controls": "dshp-project-options",
+              "aria-expanded": true,
+              "aria-activedescendant": activeIndex >= 0 ? `dshp-project-option-${activeIndex}` : undefined
+            })
           ),
-          h("div", { className: "dshp-list" },
+          h("div", { id: "dshp-project-options", className: "dshp-list", role: "listbox" },
             filtered.length
-              ? filtered.map((project) => h("button", {
+              ? filtered.map((project, index) => h("button", {
                   key: project.workspaceId,
+                  id: `dshp-project-option-${index}`,
                   type: "button",
                   className: "dshp-project-item",
+                  role: "option",
+                  "aria-selected": project.workspaceId === selectedId,
                   "data-selected": project.workspaceId === selectedId ? "true" : "false",
+                  "data-active": index === activeIndex ? "true" : "false",
                   title: project.path,
+                  onMouseEnter: () => setActiveIndex(index),
                   onClick: () => onPick(project.workspaceId)
                 }, h(Icon, { name: "folder", size: 18 }), h("span", null, project.title)))
               : h("div", { className: "dshp-menu-empty" }, projects.length ? t("noMatches") : t("noProjects"))
