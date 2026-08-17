@@ -7,9 +7,9 @@ test("unwraps the Connection RPC success envelope without triggering a fallback"
   assert.equal(
     unwrapNativeDirectoryResult({
       ok: true,
-      value: { path: "C:\\Users\\panwe\\Desktop\\C语言学习" }
+      value: { path: "C:\\Users\\Public\\Documents\\DSH-Demo\\Project-Atlas" }
     }),
-    "C:\\Users\\panwe\\Desktop\\C语言学习"
+    "C:\\Users\\Public\\Documents\\DSH-Demo\\Project-Atlas"
   );
 });
 

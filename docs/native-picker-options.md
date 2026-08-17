@@ -19,7 +19,7 @@ DSH Desktop 2.0.1 pins the browse directory-picker pair on Windows after all use
 
 Use this option when you want the native chooser to be a Desktop-wide capability rather than a feature owned by `dsh-projects`.
 
-- Patched installer and SHA-256: [v0.2.0-alpha.1 release](https://github.com/WenhongPan/dsh-projects/releases/tag/v0.2.0-alpha.1)
+- Patched installer and SHA-256: [v0.2.0-alpha.2 release](https://github.com/WenhongPan/dsh-projects/releases/tag/v0.2.0-alpha.2)
 - Patch source: [WenhongPan/deepseek-harness-desktop branch](https://github.com/WenhongPan/deepseek-harness-desktop/tree/agent/native-directory-picker)
 - Upstream review: [anywhere-labs/deepseek-harness-desktop#159](https://github.com/anywhere-labs/deepseek-harness-desktop/pull/159)
 
