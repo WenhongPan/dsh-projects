@@ -22,21 +22,47 @@ test("Electron picker returns the selected directory and uses the focused window
   let call;
   const path = await pickWithElectron(new AbortController().signal, async () => ({
     BrowserWindow: { getFocusedWindow: () => parent },
+    app: { getPath: (name) => name === "desktop" ? "C:\\Users\\test\\Desktop" : "" },
     dialog: {
       async showOpenDialog(...args) {
         call = args;
         return { canceled: false, filePaths: ["C:\\work\\project"] };
       }
     }
-  }));
+  }), { inspectPath: async () => ({ isDirectory: () => false }) });
   assert.equal(path, "C:\\work\\project");
   assert.equal(call[0], parent);
   assert.deepEqual(call[1].properties, ["openDirectory", "createDirectory"]);
+  assert.equal(call[1].defaultPath, "C:\\Users\\test\\Desktop");
+});
+
+test("Electron picker starts from the remembered parent when it still exists", async () => {
+  let options;
+  await pickWithElectron(new AbortController().signal, async () => ({
+    BrowserWindow: { getFocusedWindow: () => null },
+    app: { getPath: () => "C:\\Users\\test\\Desktop" },
+    dialog: { showOpenDialog: async (received) => { options = received; return { canceled: true, filePaths: [] }; } }
+  }), {
+    defaultPath: "D:\\projects",
+    inspectPath: async (path) => ({ isDirectory: () => path === "D:\\projects" })
+  });
+  assert.equal(options.defaultPath, "D:\\projects");
+});
+
+test("Electron picker can explicitly start from the system home directory", async () => {
+  let options;
+  await pickWithElectron(new AbortController().signal, async () => ({
+    BrowserWindow: { getFocusedWindow: () => null },
+    app: { getPath: (name) => name === "home" ? "C:\\Users\\test" : "C:\\Users\\test\\Desktop" },
+    dialog: { showOpenDialog: async (received) => { options = received; return { canceled: true, filePaths: [] }; } }
+  }), { startLocation: "home" });
+  assert.equal(options.defaultPath, "C:\\Users\\test");
 });
 
 test("Electron picker maps cancellation to null", async () => {
   const path = await pickWithElectron(new AbortController().signal, async () => ({
     BrowserWindow: { getFocusedWindow: () => null },
+    app: { getPath: () => "C:\\Users\\test\\Desktop" },
     dialog: { showOpenDialog: async () => ({ canceled: true, filePaths: [] }) }
   }));
   assert.equal(path, null);
@@ -57,7 +83,7 @@ test("plain Node hosts delegate to the official cross-platform DSH picker", asyn
   assert.equal(path, "C:\\native");
 });
 
-test("bridge accepts only its empty pickDirectory request", async () => {
+test("bridge accepts an optional picker default path and rejects unknown fields", async () => {
   const expectRoot = "C:\\Users\\Public\\Documents\\DSH-Default";
   const expectPath = `${expectRoot}\\2026-08-17\\new-chat`;
   const handler = createNativeBridgeHandler({
@@ -72,6 +98,10 @@ test("bridge accepts only its empty pickDirectory request", async () => {
     }
   });
   assert.deepEqual(await handler("pickDirectory", {}, new AbortController().signal), {
+    ok: true,
+    value: { path: "/tmp/project" }
+  });
+  assert.deepEqual(await handler("pickDirectory", { defaultPath: "/tmp" }, new AbortController().signal), {
     ok: true,
     value: { path: "/tmp/project" }
   });
@@ -97,7 +127,7 @@ test("bridge accepts only its empty pickDirectory request", async () => {
     ok: false,
     error: {
       code: "internal",
-      message: "dsh-projects: bridge payload must be an empty object",
+      message: "dsh-projects: bridge payload may only contain defaultPath and a desktop/home startLocation",
       details: {}
     }
   });

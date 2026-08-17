@@ -164,12 +164,163 @@ var require_project_picker = __commonJS({
   }
 });
 
+// src/core/picker-history.cjs
+var require_picker_history = __commonJS({
+  "src/core/picker-history.cjs"(exports2, module2) {
+    function parentDirectory2(value) {
+      const path = String(value || "").replace(/[\\/]+$/, "");
+      if (!path) return "";
+      const match = path.match(/^(.*)[\\/][^\\/]+$/);
+      if (!match) return "";
+      let parent = match[1];
+      if (!parent) return path.startsWith("/") ? "/" : "";
+      if (/^[A-Za-z]:$/.test(parent)) parent += "\\";
+      return parent;
+    }
+    module2.exports = { parentDirectory: parentDirectory2 };
+  }
+});
+
+// src/core/project-groups.cjs
+var require_project_groups = __commonJS({
+  "src/core/project-groups.cjs"(exports2, module2) {
+    var GROUP_PREFIX = "dshp-group:";
+    var PROJECT_GROUP_SCHEMA_VERSION = 1;
+    function uniqueStrings(values) {
+      const seen = /* @__PURE__ */ new Set();
+      const result = [];
+      for (const value of values || []) {
+        if (typeof value !== "string" || !value || seen.has(value)) continue;
+        seen.add(value);
+        result.push(value);
+      }
+      return result;
+    }
+    function normalizeProjectGroups(groups, workspaces) {
+      const available = new Map((workspaces || []).map((workspace) => [workspace.workspaceId, workspace]));
+      const claimed = /* @__PURE__ */ new Set();
+      const claimedGroupIds = /* @__PURE__ */ new Set();
+      const normalized = [];
+      for (const raw of groups || []) {
+        if (!raw || typeof raw !== "object") continue;
+        const id = typeof raw.id === "string" ? raw.id.trim() : "";
+        const title = typeof raw.title === "string" ? raw.title.trim().slice(0, 80) : "";
+        if (!id || !title || claimedGroupIds.has(id)) continue;
+        const memberWorkspaceIds = uniqueStrings(raw.memberWorkspaceIds).filter((workspaceId) => available.has(workspaceId) && !claimed.has(workspaceId));
+        if (memberWorkspaceIds.length < 2) continue;
+        const primaryWorkspaceId = memberWorkspaceIds.includes(raw.primaryWorkspaceId) ? raw.primaryWorkspaceId : memberWorkspaceIds[0];
+        for (const workspaceId of memberWorkspaceIds) claimed.add(workspaceId);
+        claimedGroupIds.add(id);
+        normalized.push({ id, title, primaryWorkspaceId, memberWorkspaceIds });
+      }
+      return normalized;
+    }
+    function createProjectGroupManifest2(groups) {
+      return {
+        schemaVersion: PROJECT_GROUP_SCHEMA_VERSION,
+        groups: Array.isArray(groups) ? groups : [],
+        supported: true
+      };
+    }
+    function readProjectGroupManifest2(value) {
+      if (Array.isArray(value)) return createProjectGroupManifest2(value);
+      if (!value || typeof value !== "object") return createProjectGroupManifest2([]);
+      if (value.schemaVersion === PROJECT_GROUP_SCHEMA_VERSION) {
+        return createProjectGroupManifest2(value.groups);
+      }
+      if (Number.isInteger(value.schemaVersion) && value.schemaVersion > PROJECT_GROUP_SCHEMA_VERSION) {
+        return { ...value, supported: false };
+      }
+      return createProjectGroupManifest2([]);
+    }
+    function composeProjectGroups2(workspaces, groups) {
+      const list = workspaces || [];
+      const byId = new Map(list.map((workspace) => [workspace.workspaceId, workspace]));
+      const normalizedGroups = normalizeProjectGroups(groups, list);
+      const groupedWorkspaceIds = new Set(normalizedGroups.flatMap((group) => group.memberWorkspaceIds));
+      const groupedProjects = normalizedGroups.map((group) => {
+        const memberWorkspaces = group.memberWorkspaceIds.map((workspaceId) => byId.get(workspaceId)).filter(Boolean);
+        const primary = byId.get(group.primaryWorkspaceId) || memberWorkspaces[0];
+        const sessionIds = uniqueStrings(memberWorkspaces.flatMap((workspace) => workspace.sessionIds || []));
+        return {
+          workspaceId: `${GROUP_PREFIX}${group.id}`,
+          title: group.title,
+          path: primary?.path || "",
+          sessionIds,
+          advancedGroup: true,
+          groupId: group.id,
+          primaryWorkspaceId: primary?.workspaceId || group.primaryWorkspaceId,
+          memberWorkspaceIds: group.memberWorkspaceIds,
+          memberWorkspaces
+        };
+      });
+      return {
+        groups: normalizedGroups,
+        projects: [...groupedProjects, ...list.filter((workspace) => !groupedWorkspaceIds.has(workspace.workspaceId))]
+      };
+    }
+    function resolveProjectWorkspaceId2(projectId, projects) {
+      const project = (projects || []).find((item) => item.workspaceId === projectId);
+      return project?.advancedGroup ? project.primaryWorkspaceId : projectId;
+    }
+    function upsertProjectGroup2(groups, group, workspaces) {
+      const withoutCurrent = (groups || []).filter((item) => item?.id !== group?.id);
+      return normalizeProjectGroups([...withoutCurrent, group], workspaces);
+    }
+    function removeProjectGroup2(groups, groupId) {
+      return (groups || []).filter((group) => group?.id !== groupId);
+    }
+    module2.exports = {
+      GROUP_PREFIX,
+      PROJECT_GROUP_SCHEMA_VERSION,
+      composeProjectGroups: composeProjectGroups2,
+      createProjectGroupManifest: createProjectGroupManifest2,
+      normalizeProjectGroups,
+      readProjectGroupManifest: readProjectGroupManifest2,
+      removeProjectGroup: removeProjectGroup2,
+      resolveProjectWorkspaceId: resolveProjectWorkspaceId2,
+      upsertProjectGroup: upsertProjectGroup2
+    };
+  }
+});
+
+// src/core/session-state.cjs
+var require_session_state = __commonJS({
+  "src/core/session-state.cjs"(exports2, module2) {
+    var PENDING_INTERACTIONS = /* @__PURE__ */ new Set(["approval", "plan-review", "question"]);
+    function sessionStateKind2(session) {
+      if (PENDING_INTERACTIONS.has(session?.pendingInteraction)) return "attention";
+      if (session?.running === true) return "running";
+      if (session?.completed === true) return "completed";
+      return null;
+    }
+    function attentionCount2(sessions) {
+      return (sessions || []).filter((session) => sessionStateKind2(session) === "attention").length;
+    }
+    function attentionBuckets2(sessions) {
+      const buckets = { attention: [], running: [], completed: [] };
+      for (const session of sessions || []) {
+        const kind = sessionStateKind2(session);
+        if (kind) buckets[kind].push(session);
+      }
+      for (const list of Object.values(buckets)) {
+        list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      }
+      return buckets;
+    }
+    module2.exports = { attentionBuckets: attentionBuckets2, attentionCount: attentionCount2, sessionStateKind: sessionStateKind2 };
+  }
+});
+
 // src/client.cjs
 var React = require("react");
 var ReactDOM = require("react-dom");
 var { createDefaultWorkspaceManager, unwrapDefaultWorkspaceResult } = require_default_workspace();
 var { unwrapNativeDirectoryResult } = require_native_picker_result();
 var { initialProjectIndex, nextProjectIndex } = require_project_picker();
+var { parentDirectory } = require_picker_history();
+var { composeProjectGroups, createProjectGroupManifest, readProjectGroupManifest, removeProjectGroup, resolveProjectWorkspaceId, upsertProjectGroup } = require_project_groups();
+var { attentionBuckets, attentionCount, sessionStateKind } = require_session_state();
 var h = React.createElement;
 var NS = "dsh-projects";
 var dictionaries = {
@@ -205,6 +356,11 @@ var dictionaries = {
     priority: "\u4F18\u5148\u7EA7",
     recentlyUpdated: "\u6700\u8FD1\u66F4\u65B0",
     manualOrder: "\u624B\u52A8\u6392\u5E8F",
+    pickerStart: "\u76EE\u5F55\u7A97\u53E3\u8D77\u59CB\u4F4D\u7F6E",
+    pickerLast: "\u4E0A\u6B21\u4F7F\u7528\u7684\u4F4D\u7F6E",
+    pickerDesktop: "\u684C\u9762",
+    pickerHome: "\u7528\u6237\u4E3B\u76EE\u5F55",
+    pickerProjectParent: "\u5F53\u524D\u9879\u76EE\u7684\u7236\u76EE\u5F55",
     chats: "\u804A\u5929",
     pinProject: "\u7F6E\u9876\u9879\u76EE",
     unpinProject: "\u53D6\u6D88\u7F6E\u9876\u9879\u76EE",
@@ -253,7 +409,33 @@ var dictionaries = {
     normalChat: "\u666E\u901A\u5BF9\u8BDD",
     normalChatHint: "\u4E0D\u52A0\u5165\u9879\u76EE\uFF0C\u4F7F\u7528\u9ED8\u8BA4\u4EFB\u52A1\u6587\u4EF6\u5939",
     startingChat: "\u6B63\u5728\u521B\u5EFA\u666E\u901A\u5BF9\u8BDD\u2026",
-    defaultChatFailed: "\u666E\u901A\u5BF9\u8BDD\u521B\u5EFA\u5931\u8D25\uFF1A{message}"
+    defaultChatFailed: "\u666E\u901A\u5BF9\u8BDD\u521B\u5EFA\u5931\u8D25\uFF1A{message}",
+    waitingApproval: "\u7B49\u5F85\u5BA1\u6279",
+    waitingPlanReview: "\u7B49\u5F85\u8BA1\u5212\u5BA1\u6838",
+    waitingAnswer: "\u7B49\u5F85\u56DE\u7B54",
+    runningStatus: "\u6B63\u5728\u8FD0\u884C",
+    completedStatus: "\u5DF2\u5B8C\u6210\uFF0C\u5C1A\u672A\u67E5\u770B",
+    attentionItems: "{count} \u9879\u5F85\u5904\u7406",
+    attentionDisplay: "\u5F85\u5904\u7406\u663E\u793A",
+    attentionOff: "\u5173\u95ED\u805A\u5408",
+    attentionCompact: "\u7B80\u6D01\u6570\u5B57",
+    attentionExpanded: "\u5C55\u5F00\u5217\u8868",
+    attentionCenter: "\u5F85\u5904\u7406",
+    attentionWaiting: "\u7B49\u5F85\u4F60",
+    attentionRunning: "\u8FD0\u884C\u4E2D",
+    attentionCompleted: "\u5DF2\u5B8C\u6210",
+    advancedProject: "\u591A\u6587\u4EF6\u5939\u9879\u76EE",
+    groupFolders: "\u7EC4\u5408\u6587\u4EF6\u5939",
+    editGroup: "\u7F16\u8F91\u7EC4\u5408",
+    dissolveGroup: "\u62C6\u5206\u7EC4\u5408",
+    groupProjectTitle: "\u7EC4\u5408\u4E3A\u4E00\u4E2A\u9879\u76EE",
+    groupProjectHint: "\u9009\u62E9\u81F3\u5C11\u4E24\u4E2A\u73B0\u6709\u9879\u76EE\u3002\u6587\u4EF6\u5939\u548C\u804A\u5929\u4E0D\u4F1A\u88AB\u79FB\u52A8\uFF0C\u65B0\u7684\u4F1A\u8BDD\u9ED8\u8BA4\u4F7F\u7528\u4E3B\u6587\u4EF6\u5939\u3002",
+    groupMembers: "\u5305\u542B\u7684\u6587\u4EF6\u5939",
+    primaryFolder: "\u4E3B\u6587\u4EF6\u5939",
+    needTwoFolders: "\u8BF7\u81F3\u5C11\u9009\u62E9\u4E24\u4E2A\u6587\u4EF6\u5939\u3002",
+    groupConflict: "\u90E8\u5206\u6587\u4EF6\u5939\u5DF2\u5C5E\u4E8E\u5176\u4ED6\u7EC4\u5408\uFF0C\u4E0D\u80FD\u91CD\u590D\u52A0\u5165\u3002",
+    saveGroup: "\u4FDD\u5B58\u7EC4\u5408",
+    folderCount: "{count} \u4E2A\u6587\u4EF6\u5939"
   },
   en: {
     selectProject: "Select project",
@@ -287,6 +469,11 @@ var dictionaries = {
     priority: "Priority",
     recentlyUpdated: "Recently updated",
     manualOrder: "Manual order",
+    pickerStart: "Folder chooser starts at",
+    pickerLast: "Last used location",
+    pickerDesktop: "Desktop",
+    pickerHome: "Home directory",
+    pickerProjectParent: "Current project's parent",
     chats: "Chats",
     pinProject: "Pin project",
     unpinProject: "Unpin project",
@@ -335,7 +522,33 @@ var dictionaries = {
     normalChat: "Regular chat",
     normalChatHint: "No project; use the default task folder",
     startingChat: "Starting regular chat\u2026",
-    defaultChatFailed: "Could not start regular chat: {message}"
+    defaultChatFailed: "Could not start regular chat: {message}",
+    waitingApproval: "Waiting for approval",
+    waitingPlanReview: "Waiting for plan review",
+    waitingAnswer: "Waiting for an answer",
+    runningStatus: "Running",
+    completedStatus: "Completed, not yet viewed",
+    attentionItems: "{count} need attention",
+    attentionDisplay: "Attention display",
+    attentionOff: "Turn off summaries",
+    attentionCompact: "Compact counts",
+    attentionExpanded: "Expanded list",
+    attentionCenter: "Attention",
+    attentionWaiting: "Waiting for you",
+    attentionRunning: "Running",
+    attentionCompleted: "Completed",
+    advancedProject: "Multi-folder project",
+    groupFolders: "Group folders",
+    editGroup: "Edit group",
+    dissolveGroup: "Dissolve group",
+    groupProjectTitle: "Group into one project",
+    groupProjectHint: "Choose at least two existing projects. Folders and chats stay in place; new Sessions use the primary folder.",
+    groupMembers: "Included folders",
+    primaryFolder: "Primary folder",
+    needTwoFolders: "Choose at least two folders.",
+    groupConflict: "Some folders already belong to another group.",
+    saveGroup: "Save group",
+    folderCount: "{count} folders"
   }
 };
 var css = `
@@ -389,7 +602,22 @@ var css = `
       .dshp-sidebar-project:hover,.dshp-sidebar-session:hover{background:var(--dshp-hover)}
       .dshp-sidebar-session[data-current=true]{background:var(--dshp-selected);color:var(--dshp-text)}
       .dshp-sidebar-project span,.dshp-sidebar-session span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      .dshp-sidebar-session .dshp-running{position:absolute;left:25px;width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-state-business-primary,#4d86da);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary,#4d86da) 14%,transparent)}
+      .dshp-sidebar-session .dshp-session-state,.dshp-search-chat .dshp-session-state,.dshp-attention-row .dshp-session-state{flex:none;width:6px;height:6px;border-radius:50%}
+      .dshp-sidebar-session .dshp-session-state{position:absolute;left:25px}
+      .dshp-session-state[data-state=attention]{background:#d49335;box-shadow:0 0 0 2px color-mix(in srgb,#d49335 16%,transparent)}
+      .dshp-session-state[data-state=running]{background:var(--dsw-alias-state-business-primary,#4d86da);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary,#4d86da) 14%,transparent);animation:dshp-pulse 1.5s ease-in-out infinite}
+      .dshp-session-state[data-state=completed]{background:#4aa56c;box-shadow:0 0 0 2px color-mix(in srgb,#4aa56c 14%,transparent)}
+      @keyframes dshp-pulse{50%{opacity:.45}}
+      .dshp-project-badge{flex:none;min-width:18px;height:18px;padding:0 5px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:color-mix(in srgb,#d49335 16%,transparent);color:#c98224;font-size:11px;font-weight:650;line-height:18px}
+      .dshp-attention-panel{margin:1px 4px 9px;padding:7px;border:1px solid var(--dshp-border);border-radius:10px;background:color-mix(in srgb,var(--dshp-surface) 92%,var(--dshp-hover))}
+      .dshp-attention-head{height:24px;padding:0 3px;display:flex;align-items:center;justify-content:space-between;color:var(--dshp-text);font-size:12.5px;font-weight:680}
+      .dshp-attention-total{color:var(--dshp-text-3);font-size:11px;font-weight:550}
+      .dshp-attention-group-title{padding:7px 5px 3px;color:var(--dshp-text-3);font-size:10.5px;font-weight:680}
+      .dshp-attention-row{box-sizing:border-box;width:100%;min-height:34px;padding:5px 6px;border:0;border-radius:8px;background:transparent;color:var(--dshp-text-2);display:flex;align-items:center;gap:8px;text-align:left;font:inherit;cursor:pointer}
+      .dshp-attention-row:hover{background:var(--dshp-hover);color:var(--dshp-text)}
+      .dshp-attention-row-copy{min-width:0;flex:1}
+      .dshp-attention-row-title{font-size:12.5px;line-height:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .dshp-attention-row-meta{font-size:10.5px;line-height:14px;color:var(--dshp-text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .dshp-more{height:28px;border:0;background:transparent;color:var(--dshp-text-3);font:inherit;font-size:12px;padding:0 9px 0 42px;cursor:pointer}
       .dshp-more:hover{color:var(--dshp-text-2)}
       .dshp-sidebar-empty{padding:10px 9px;color:var(--dshp-text-3);font-size:12.5px}
@@ -412,6 +640,7 @@ var css = `
       .dshp-context-separator{height:1px;background:var(--dshp-border);margin:5px 4px}
       .dshp-context-item{box-sizing:border-box;width:100%;min-height:36px;border:0;border-radius:9px;background:transparent;color:inherit;display:flex;align-items:center;gap:10px;padding:7px 10px;text-align:left;font:inherit;font-size:14px;line-height:20px;cursor:pointer}
       .dshp-context-item:hover{background:var(--dshp-selected)}
+      .dshp-context-item:focus-visible,.dshp-group-check:focus-visible,.dshp-group-primary input:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4d86da);outline-offset:1px}
       .dshp-context-item[data-danger=true]{color:var(--dsw-alias-state-error-primary,#d83b3b)}
       .dshp-context-item .dshp-check{width:17px;display:flex;justify-content:center;flex:none;color:var(--dshp-text-2)}
       .dshp-hover-preview{position:fixed;z-index:10008;box-sizing:border-box;width:316px;max-width:calc(100vw - 24px);border:1px solid var(--dshp-border);border-radius:13px;background:var(--dshp-elevated);box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.16));padding:14px;pointer-events:none}
@@ -421,6 +650,20 @@ var css = `
       .dshp-preview-meta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .dshp-preview-stats{display:flex;gap:7px;color:var(--dshp-text-2);font-size:12.5px;margin-top:9px}
       .dshp-small-modal{width:min(430px,calc(100vw - 28px))}
+      .dshp-group-modal{width:min(520px,calc(100vw - 28px))}
+      .dshp-group-hint{margin:-3px 0 14px;color:var(--dshp-text-3);font-size:12.5px;line-height:18px}
+      .dshp-group-list{max-height:min(310px,calc(100vh - 330px));overflow:auto;border:1px solid var(--dshp-border);border-radius:11px;background:var(--dshp-surface);padding:5px}
+      .dshp-group-row{box-sizing:border-box;width:100%;min-height:44px;border:0;border-radius:8px;background:transparent;color:var(--dshp-text);display:flex;align-items:center;gap:9px;padding:6px 8px;text-align:left;font:inherit;cursor:pointer}
+      .dshp-group-row:hover{background:var(--dshp-hover)}
+      .dshp-group-row[data-disabled=true]{opacity:.45;cursor:not-allowed}
+      .dshp-group-fieldset{min-width:0;margin:0;padding:0;border:0}
+      .dshp-group-select{min-width:0;flex:1;display:flex;align-items:center;gap:9px;cursor:pointer}
+      .dshp-group-check{width:17px;height:17px;flex:none}
+      .dshp-group-copy{min-width:0;flex:1}
+      .dshp-group-title{display:block;font-size:13px;line-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .dshp-group-path{display:block;font-size:11px;line-height:15px;color:var(--dshp-text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .dshp-group-primary{display:flex;align-items:center;gap:6px;color:var(--dshp-text-3);font-size:10.5px;white-space:nowrap}
+      .dshp-project-kind{flex:none;margin-left:6px;color:var(--dshp-text-3);font-size:10.5px;font-weight:550}
       .dshp-confirm-copy{color:var(--dshp-text-2);font-size:13.5px;line-height:20px;margin:-3px 0 4px}
       .dshp-dir-modal{width:min(560px,calc(100vw - 28px));padding:18px}
       .dshp-dir-crumbs{display:flex;align-items:center;gap:2px;min-height:34px;margin:-3px 0 10px;overflow-x:auto;scrollbar-width:none}
@@ -443,6 +686,15 @@ var css = `
       .dshp-sidebar-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--dshp-text);font:inherit;font-size:12px;line-height:18px}
       .dshp-sidebar-search input::placeholder{color:var(--dshp-text-3)}
       .dshp-search-results{display:flex;flex-direction:column;gap:2px;padding:0 2px 12px}
+      .dshp-search-group{display:flex;flex-direction:column;gap:1px;margin-top:7px}
+      .dshp-search-group-title{box-sizing:border-box;width:100%;height:30px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:var(--dshp-text-2);display:flex;align-items:center;gap:7px;text-align:left;font:inherit;font-size:12.5px;font-weight:650;cursor:pointer}
+      .dshp-search-group-title:hover{background:var(--dshp-hover);color:var(--dshp-text)}
+      .dshp-search-chat{box-sizing:border-box;width:100%;min-height:31px;padding:5px 8px 5px 27px;border:0;border-radius:8px;background:transparent;color:var(--dshp-text-2);display:flex;align-items:center;gap:7px;text-align:left;font:inherit;font-size:13px;line-height:19px;cursor:pointer}
+      .dshp-search-chat:hover{background:var(--dshp-hover);color:var(--dshp-text)}
+      .dshp-search-chat-copy{min-width:0;flex:1}
+      .dshp-search-chat-title,.dshp-search-chat-snippet{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .dshp-search-chat-snippet{font-size:11.5px;line-height:16px;color:var(--dshp-text-3)}
+      .dshp-search-match{background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4d86da) 17%,transparent);color:inherit;border-radius:3px;padding:0 1px}
       .dshp-result-group{padding:8px 8px 3px;color:var(--dshp-text-3);font-size:11.5px;font-weight:650}
       .dshp-search-result{box-sizing:border-box;width:100%;min-height:48px;border:0;border-radius:9px;background:transparent;color:inherit;display:flex;align-items:flex-start;gap:9px;padding:8px;text-align:left;font:inherit;cursor:pointer}
       .dshp-search-result:hover{background:var(--dshp-hover)}
@@ -537,6 +789,28 @@ function normalizedPath(value) {
 function sessionTitle(session, t) {
   return session.blank ? t("newSession") : session.displayTitle || session.title || t("newSession");
 }
+function sessionStatusLabel(session, t) {
+  if (session?.pendingInteraction === "approval") return t("waitingApproval");
+  if (session?.pendingInteraction === "plan-review") return t("waitingPlanReview");
+  if (session?.pendingInteraction === "question") return t("waitingAnswer");
+  if (session?.running) return t("runningStatus");
+  if (session?.completed) return t("completedStatus");
+  return "";
+}
+function highlighted(text, query) {
+  const value = String(text || "");
+  const needle = String(query || "").trim();
+  if (!needle) return value;
+  const index = value.toLowerCase().indexOf(needle.toLowerCase());
+  if (index < 0) return value;
+  return h(
+    React.Fragment,
+    null,
+    value.slice(0, index),
+    h("mark", { className: "dshp-search-match" }, value.slice(index, index + needle.length)),
+    value.slice(index + needle.length)
+  );
+}
 function projectUpdatedAt(project, sessions) {
   let latest = 0;
   for (const id of project.sessionIds || []) latest = Math.max(latest, sessions.byId[id]?.updatedAt || 0);
@@ -624,7 +898,7 @@ function DirectoryBrowserModal({ open, initialPath, listDirectory, onPick, onClo
     document.body
   );
 }
-function CreateProjectModal({ open, projects, createWorkspace, renameWorkspace, pickDirectory, listDirectory, onCreated, onClose, t }) {
+function CreateProjectModal({ open, projects, currentProjectPath, createWorkspace, renameWorkspace, pickDirectory, listDirectory, onCreated, onClose, t }) {
   const [name2, setName] = React.useState("");
   const [path, setPath] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -669,7 +943,7 @@ function CreateProjectModal({ open, projects, createWorkspace, renameWorkspace, 
     setPicking(true);
     setError("");
     try {
-      const selected = await pickDirectory();
+      const selected = await pickDirectory({ currentProjectPath });
       adoptFolder(selected);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason);
@@ -786,7 +1060,10 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
   const workspaceState = useWorkspaces((state) => state);
   const sessionState = useSessions((state) => state);
   const allProjects = workspaceState.items || [];
-  const projects = allProjects.filter((project) => !isDefaultWorkspace(project));
+  const rawProjects = allProjects.filter((project) => !isDefaultWorkspace(project));
+  const pickerPrefs = readSidebarPrefs();
+  const projects = composeProjectGroups(rawProjects, pickerPrefs.projectGroups.supported === false ? [] : pickerPrefs.projectGroups.groups).projects;
+  const selectedProjectId = projects.find((project) => project.advancedGroup && project.memberWorkspaceIds.includes(selectedId))?.workspaceId || selectedId;
   const [query, setQuery] = React.useState("");
   const [modalOpen, setModalOpen] = React.useState(false);
   const [defaultBusy, setDefaultBusy] = React.useState(false);
@@ -843,11 +1120,11 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
   };
   const ordered = React.useMemo(() => [...projects].sort((a, b) => projectUpdatedAt(b, sessionState) - projectUpdatedAt(a, sessionState) || a.title.localeCompare(b.title)), [projects, sessionState]);
   const needle = query.trim().toLowerCase();
-  const filtered = React.useMemo(() => needle ? ordered.filter((project) => project.title.toLowerCase().includes(needle) || project.path.toLowerCase().includes(needle)) : ordered, [needle, ordered]);
+  const filtered = React.useMemo(() => needle ? ordered.filter((project) => project.title.toLowerCase().includes(needle) || project.path.toLowerCase().includes(needle) || project.memberWorkspaces?.some((workspace) => workspace.title.toLowerCase().includes(needle) || workspace.path.toLowerCase().includes(needle))) : ordered, [needle, ordered]);
   React.useEffect(() => {
     if (!open) return setActiveIndex(-1);
-    setActiveIndex(initialProjectIndex(filtered, selectedId));
-  }, [open, filtered, selectedId]);
+    setActiveIndex(initialProjectIndex(filtered, selectedProjectId));
+  }, [open, filtered, selectedProjectId]);
   const handleSearchKey = (event) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
@@ -856,7 +1133,7 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
     }
     if (event.key === "Enter" && activeIndex >= 0 && filtered[activeIndex]) {
       event.preventDefault();
-      onPick(filtered[activeIndex].workspaceId);
+      onPick(resolveProjectWorkspaceId(filtered[activeIndex].workspaceId, projects));
     }
   };
   const menu = open && !modalOpen ? ReactDOM.createPortal(
@@ -889,13 +1166,13 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
           type: "button",
           className: "dshp-project-item",
           role: "option",
-          "aria-selected": project.workspaceId === selectedId,
-          "data-selected": project.workspaceId === selectedId ? "true" : "false",
+          "aria-selected": project.workspaceId === selectedProjectId,
+          "data-selected": project.workspaceId === selectedProjectId ? "true" : "false",
           "data-active": index === activeIndex ? "true" : "false",
           title: project.path,
           onMouseEnter: () => setActiveIndex(index),
-          onClick: () => onPick(project.workspaceId)
-        }, h(Icon, { name: "folder", size: 18 }), h("span", null, project.title))) : h("div", { className: "dshp-menu-empty" }, projects.length ? t("noMatches") : t("noProjects"))
+          onClick: () => onPick(resolveProjectWorkspaceId(project.workspaceId, projects))
+        }, h(Icon, { name: "folder", size: 18 }), h("span", null, project.title), project.advancedGroup ? h("span", { className: "dshp-project-kind" }, format(t, "folderCount", { count: project.memberWorkspaceIds.length })) : null)) : h("div", { className: "dshp-menu-empty" }, projects.length ? t("noMatches") : t("noProjects"))
       ),
       h(
         "div",
@@ -927,6 +1204,7 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
     h(CreateProjectModal, {
       open: modalOpen,
       projects: allProjects,
+      currentProjectPath: projects.find((project) => project.workspaceId === selectedProjectId)?.path || "",
       createWorkspace,
       renameWorkspace,
       pickDirectory,
@@ -941,13 +1219,17 @@ function ProjectPicker({ open, anchorRef, selectedId, onPick, onClose, useWorksp
   );
 }
 var SIDEBAR_PREFS_KEY = "dsh-projects:sidebar:v2";
+var PICKER_HISTORY_KEY = "dsh-projects:picker:v1";
 var defaultSidebarPrefs = {
   groupBy: "project",
   orderBy: "priority",
   pinnedProjects: [],
   favoriteProjects: [],
   pinnedSessions: [],
-  manualFlatOrder: []
+  manualFlatOrder: [],
+  pickerStart: "last",
+  attentionMode: "compact",
+  projectGroups: createProjectGroupManifest([])
 };
 function readSidebarPrefs() {
   try {
@@ -958,7 +1240,10 @@ function readSidebarPrefs() {
       pinnedProjects: Array.isArray(parsed.pinnedProjects) ? parsed.pinnedProjects : [],
       favoriteProjects: Array.isArray(parsed.favoriteProjects) ? parsed.favoriteProjects : [],
       pinnedSessions: Array.isArray(parsed.pinnedSessions) ? parsed.pinnedSessions : [],
-      manualFlatOrder: Array.isArray(parsed.manualFlatOrder) ? parsed.manualFlatOrder : []
+      manualFlatOrder: Array.isArray(parsed.manualFlatOrder) ? parsed.manualFlatOrder : [],
+      pickerStart: ["last", "desktop", "home", "project-parent"].includes(parsed.pickerStart) ? parsed.pickerStart : "last",
+      attentionMode: ["off", "compact", "expanded"].includes(parsed.attentionMode) ? parsed.attentionMode : "compact",
+      projectGroups: readProjectGroupManifest(parsed.projectGroups ?? parsed.advancedGroups)
     };
   } catch {
     return { ...defaultSidebarPrefs };
@@ -968,7 +1253,18 @@ function useSidebarPrefs() {
   const [prefs, setPrefs] = React.useState(readSidebarPrefs);
   React.useEffect(() => {
     try {
-      localStorage.setItem(SIDEBAR_PREFS_KEY, JSON.stringify(prefs));
+      const persisted = { ...prefs };
+      delete persisted.advancedGroups;
+      if (persisted.projectGroups?.supported === false) {
+        const { supported, ...futureManifest } = persisted.projectGroups;
+        persisted.projectGroups = futureManifest;
+      } else {
+        persisted.projectGroups = {
+          schemaVersion: persisted.projectGroups?.schemaVersion || 1,
+          groups: Array.isArray(persisted.projectGroups?.groups) ? persisted.projectGroups.groups : []
+        };
+      }
+      localStorage.setItem(SIDEBAR_PREFS_KEY, JSON.stringify(persisted));
     } catch {
     }
   }, [prefs]);
@@ -980,6 +1276,22 @@ function useSidebarPrefs() {
     return () => window.removeEventListener("storage", sync);
   }, []);
   return [prefs, setPrefs];
+}
+function readPickerParent() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PICKER_HISTORY_KEY) || "{}");
+    return typeof parsed.parent === "string" ? parsed.parent : "";
+  } catch {
+    return "";
+  }
+}
+function rememberPickerParent(selectedPath) {
+  const parent = parentDirectory(selectedPath);
+  if (!parent) return;
+  try {
+    localStorage.setItem(PICKER_HISTORY_KEY, JSON.stringify({ parent }));
+  } catch {
+  }
 }
 function toggleId(list, id) {
   return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
@@ -1041,17 +1353,31 @@ function PreviewPortal({ position, children }) {
   return position ? ReactDOM.createPortal(h("div", { className: "dshp-hover-preview", style: position }, children), document.body) : null;
 }
 function ContextMenu({ menu, items, onClose }) {
+  const menuRef = React.useRef(null);
   React.useEffect(() => {
     if (!menu) return;
     const outside = (event) => {
       if (!event.target.closest?.(".dshp-context")) onClose();
     };
     const key = (event) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      const buttons = [...menuRef.current?.querySelectorAll("button:not(:disabled)") || []];
+      if (!buttons.length) return;
+      event.preventDefault();
+      const current = buttons.indexOf(document.activeElement);
+      const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : event.key === "ArrowDown" ? (current + 1 + buttons.length) % buttons.length : (current - 1 + buttons.length) % buttons.length;
+      buttons[next].focus();
     };
     document.addEventListener("pointerdown", outside, true);
     window.addEventListener("keydown", key);
+    const focusTimer = setTimeout(() => menuRef.current?.querySelector("button:not(:disabled)")?.focus(), 0);
     return () => {
+      clearTimeout(focusTimer);
       document.removeEventListener("pointerdown", outside, true);
       window.removeEventListener("keydown", key);
     };
@@ -1060,16 +1386,18 @@ function ContextMenu({ menu, items, onClose }) {
   return ReactDOM.createPortal(
     h(
       "div",
-      { className: "dshp-context", style: { left: menu.left, top: menu.top }, role: "menu" },
+      { ref: menuRef, className: "dshp-context", style: { left: menu.left, top: menu.top }, role: "menu" },
       ...items.map((item) => {
-        if (item.type === "label") return h("div", { key: item.id, className: "dshp-context-label" }, item.label);
-        if (item.type === "separator") return h("div", { key: item.id, className: "dshp-context-separator" });
+        if (item.type === "label") return h("div", { key: item.id, className: "dshp-context-label", role: "presentation" }, item.label);
+        if (item.type === "separator") return h("div", { key: item.id, className: "dshp-context-separator", role: "separator" });
         return h(
           "button",
           {
             key: item.id,
             type: "button",
             className: "dshp-context-item",
+            role: typeof item.checked === "boolean" ? "menuitemcheckbox" : "menuitem",
+            "aria-checked": typeof item.checked === "boolean" ? item.checked : void 0,
             "data-danger": item.danger ? "true" : "false",
             onClick: () => {
               onClose();
@@ -1148,6 +1476,137 @@ function EditProjectModal({ project, projects, renameWorkspace, onClose, t }) {
     document.body
   );
 }
+function ProjectGroupModal({ project, workspaces, groups, onSave, onClose, t }) {
+  const currentGroup = project?.advancedGroup ? groups.find((group) => group.id === project.groupId) : null;
+  const [value, setValue] = React.useState(project?.title || "");
+  const [selected, setSelected] = React.useState(() => new Set(currentGroup?.memberWorkspaceIds || (project ? [project.workspaceId] : [])));
+  const [primary, setPrimary] = React.useState(currentGroup?.primaryWorkspaceId || project?.workspaceId || "");
+  const [error, setError] = React.useState("");
+  const inputRef = React.useRef(null);
+  const titleId = React.useId();
+  const hintId = React.useId();
+  const membersId = React.useId();
+  const errorId = React.useId();
+  React.useEffect(() => {
+    if (!project) return;
+    const group = project.advancedGroup ? groups.find((item) => item.id === project.groupId) : null;
+    setValue(project.title || "");
+    setSelected(new Set(group?.memberWorkspaceIds || [project.workspaceId]));
+    setPrimary(group?.primaryWorkspaceId || project.workspaceId);
+    setError("");
+    setTimeout(() => inputRef.current?.focus(), 20);
+  }, [project, groups]);
+  if (!project) return null;
+  const claimedByOther = new Set(groups.filter((group) => group.id !== currentGroup?.id).flatMap((group) => group.memberWorkspaceIds || []));
+  const candidates = workspaces.filter((workspace) => !claimedByOther.has(workspace.workspaceId) || selected.has(workspace.workspaceId));
+  const trimmed = value.trim();
+  const duplicate = groups.some((group) => group.id !== currentGroup?.id && group.title.trim().toLowerCase() === trimmed.toLowerCase()) || workspaces.some((workspace) => !selected.has(workspace.workspaceId) && workspace.title.trim().toLowerCase() === trimmed.toLowerCase());
+  const toggle = (workspaceId) => {
+    if (claimedByOther.has(workspaceId) || workspaceId === primary) return;
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(workspaceId)) next.delete(workspaceId);
+      else next.add(workspaceId);
+      return next;
+    });
+    setError("");
+  };
+  const save = () => {
+    if (!trimmed) return setError(t("needName"));
+    if (duplicate) return setError(t("duplicateName"));
+    if (selected.size < 2) return setError(t("needTwoFolders"));
+    const memberWorkspaceIds = workspaces.map((workspace) => workspace.workspaceId).filter((workspaceId) => selected.has(workspaceId));
+    onSave({
+      id: currentGroup?.id || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      title: trimmed,
+      primaryWorkspaceId: memberWorkspaceIds.includes(primary) ? primary : memberWorkspaceIds[0],
+      memberWorkspaceIds
+    });
+    onClose();
+  };
+  return ReactDOM.createPortal(
+    h(
+      "div",
+      { className: "dshp-backdrop", onMouseDown: (event) => {
+        if (event.target === event.currentTarget) onClose();
+      } },
+      h(
+        "form",
+        { className: "dshp-modal dshp-group-modal", role: "dialog", "aria-modal": true, "aria-labelledby": titleId, "aria-describedby": hintId, onSubmit: (event) => {
+          event.preventDefault();
+          save();
+        }, onKeyDown: (event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onClose();
+          }
+        } },
+        h(
+          "div",
+          { className: "dshp-modal-head" },
+          h("h2", { id: titleId, className: "dshp-modal-title" }, t("groupProjectTitle")),
+          h("button", { type: "button", className: "dshp-icon-button", onClick: onClose, "aria-label": t("cancel") }, h(Icon, { name: "close", size: 19 }))
+        ),
+        h("p", { id: hintId, className: "dshp-group-hint" }, t("groupProjectHint")),
+        h(
+          "div",
+          { className: "dshp-name-field" },
+          h("div", { className: "dshp-name-icon" }, h(Icon, { name: "folder", size: 18 })),
+          h("input", { ref: inputRef, value, maxLength: 80, placeholder: t("projectName"), "aria-label": t("projectName"), "aria-invalid": duplicate || Boolean(error), "aria-describedby": duplicate || error ? errorId : void 0, onChange: (event) => {
+            setValue(event.target.value);
+            setError("");
+          } })
+        ),
+        h(
+          "fieldset",
+          { className: "dshp-group-fieldset", "aria-describedby": duplicate || error ? errorId : void 0 },
+          h("legend", { id: membersId, className: "dshp-label" }, t("groupMembers")),
+          h(
+            "div",
+            { className: "dshp-group-list" },
+            ...candidates.map((workspace) => {
+              const disabled = claimedByOther.has(workspace.workspaceId);
+              const checked = selected.has(workspace.workspaceId);
+              const pathId = `${membersId}-${workspace.workspaceId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+              return h(
+                "div",
+                { key: workspace.workspaceId, className: "dshp-group-row", "data-disabled": disabled ? "true" : "false" },
+                h(
+                  "label",
+                  { className: "dshp-group-select" },
+                  h("input", { className: "dshp-group-check", type: "checkbox", checked, disabled: disabled || workspace.workspaceId === primary, "aria-describedby": pathId, onChange: () => toggle(workspace.workspaceId) }),
+                  h(
+                    "span",
+                    { className: "dshp-group-copy" },
+                    h("span", { className: "dshp-group-title" }, workspace.title),
+                    h("span", { id: pathId, className: "dshp-group-path", title: workspace.path }, workspace.path)
+                  )
+                ),
+                h(
+                  "label",
+                  { className: "dshp-group-primary", title: t("primaryFolder"), onClick: (event) => event.stopPropagation() },
+                  h("input", { type: "radio", name: "dshp-primary-folder", checked: primary === workspace.workspaceId, disabled, "aria-label": `${t("primaryFolder")}: ${workspace.title}`, onChange: () => {
+                    setPrimary(workspace.workspaceId);
+                    setSelected((current) => new Set(current).add(workspace.workspaceId));
+                  } }),
+                  h("span", null, t("primaryFolder"))
+                )
+              );
+            })
+          )
+        ),
+        duplicate ? h("div", { id: errorId, className: "dshp-error", role: "alert" }, t("duplicateName")) : h("div", { id: errorId, className: "dshp-error", "aria-live": "polite" }, error),
+        h(
+          "div",
+          { className: "dshp-modal-actions" },
+          h("button", { type: "button", className: "dshp-button", onClick: onClose }, t("cancel")),
+          h("button", { type: "submit", className: "dshp-button dshp-button-primary", disabled: !trimmed || duplicate || selected.size < 2 }, t("saveGroup"))
+        )
+      )
+    ),
+    document.body
+  );
+}
 function ConfirmModal({ request, busy, error, onConfirm, onClose, t }) {
   if (!request) return null;
   const archive = request.kind === "archive";
@@ -1182,6 +1641,8 @@ function ConfirmModal({ request, busy, error, onConfirm, onClose, t }) {
 function SessionRow({ session, project, current, pinned, draggable, dragOver, onOpen, onTogglePin, onArchive, onDragStart, onDragOver, onDrop, onDragEnd, t }) {
   const hover = useHoverPreview();
   const title = sessionTitle(session, t);
+  const state = sessionStateKind(session);
+  const stateLabel = sessionStatusLabel(session, t);
   return h(
     "div",
     {
@@ -1200,7 +1661,7 @@ function SessionRow({ session, project, current, pinned, draggable, dragOver, on
     h(
       "button",
       { type: "button", className: "dshp-sidebar-session", "data-current": current ? "true" : "false", "data-pinned": pinned ? "true" : "false", onClick: () => onOpen(session.id) },
-      session.running ? h("i", { className: "dshp-running" }) : null,
+      state ? h("i", { className: "dshp-session-state", "data-state": state, title: stateLabel, "aria-label": stateLabel }) : null,
       h("span", { style: { flex: 1, minWidth: 0 } }, title),
       project?.flatLabel ? h("span", { className: "dshp-flat-project" }, project.title) : null
     ),
@@ -1226,9 +1687,10 @@ function SessionRow({ session, project, current, pinned, draggable, dragOver, on
     )
   );
 }
-function ProjectRow({ project, sessions, pinned, favorite, menuOpen, draggable, dragOver, onStart, onMenu, onDragStart, onDragOver, onDrop, onDragEnd, t }) {
+function ProjectRow({ project, sessions, pinned, favorite, showAttentionBadge, menuOpen, draggable, dragOver, onStart, onMenu, onDragStart, onDragOver, onDrop, onDragEnd, t }) {
   const hover = useHoverPreview();
   const running = sessions.filter((session) => session.running).length;
+  const needsAttention = attentionCount(sessions);
   return h(
     "div",
     {
@@ -1248,7 +1710,9 @@ function ProjectRow({ project, sessions, pinned, favorite, menuOpen, draggable, 
       "button",
       { type: "button", className: "dshp-sidebar-project", "data-pinned": pinned ? "true" : "false", onClick: () => onStart(project.workspaceId) },
       h(Icon, { name: "folder", size: 18 }),
-      h("span", { style: { flex: 1, minWidth: 0 } }, project.title)
+      h("span", { style: { flex: 1, minWidth: 0 } }, project.title),
+      project.advancedGroup ? h("span", { className: "dshp-project-kind", title: t("advancedProject") }, format(t, "folderCount", { count: project.memberWorkspaceIds.length })) : null,
+      showAttentionBadge && needsAttention ? h("span", { className: "dshp-project-badge", title: format(t, "attentionItems", { count: needsAttention }), "aria-label": format(t, "attentionItems", { count: needsAttention }) }, needsAttention) : null
     ),
     h(
       "div",
@@ -1268,9 +1732,52 @@ function ProjectRow({ project, sessions, pinned, favorite, menuOpen, draggable, 
       PreviewPortal,
       { position: menuOpen ? null : hover.position },
       h("div", { className: "dshp-preview-title" }, project.title),
-      h("div", { className: "dshp-preview-stats" }, h("span", null, format(t, "taskCount", { count: sessions.length })), h("span", null, "\xB7"), h("span", null, format(t, "activeCount", { count: running }))),
+      h("div", { className: "dshp-preview-stats" }, h("span", null, format(t, "taskCount", { count: sessions.length })), h("span", null, "\xB7"), h("span", null, format(t, "activeCount", { count: running })), project.advancedGroup ? h(React.Fragment, null, h("span", null, "\xB7"), h("span", null, format(t, "folderCount", { count: project.memberWorkspaceIds.length }))) : null),
       h("div", { className: "dshp-preview-meta" }, h(Icon, { name: "folder", size: 17 }), h("span", null, project.path))
     )
+  );
+}
+function AttentionPanel({ sessions, projectForSession, onOpen, t }) {
+  const buckets = attentionBuckets(sessions);
+  const groups = [
+    ["attention", t("attentionWaiting")],
+    ["running", t("attentionRunning")],
+    ["completed", t("attentionCompleted")]
+  ];
+  const total = groups.reduce((count, [kind]) => count + buckets[kind].length, 0);
+  if (!total) return null;
+  return h(
+    "section",
+    { className: "dshp-attention-panel", "aria-label": t("attentionCenter") },
+    h(
+      "div",
+      { className: "dshp-attention-head" },
+      h("span", null, t("attentionCenter")),
+      h("span", { className: "dshp-attention-total" }, total)
+    ),
+    ...groups.flatMap(([kind, label]) => {
+      const items = buckets[kind];
+      if (!items.length) return [];
+      return [
+        h("div", { key: `attention-title-${kind}`, className: "dshp-attention-group-title" }, label),
+        ...items.slice(0, 5).map((session) => {
+          const project = projectForSession(session.id);
+          const stateLabel = sessionStatusLabel(session, t);
+          const meta = [project?.title || session.cwd, stateLabel].filter(Boolean).join(" \xB7 ");
+          return h(
+            "button",
+            { key: `attention-${kind}-${session.id}`, type: "button", className: "dshp-attention-row", onClick: () => onOpen(session.id) },
+            h("i", { className: "dshp-session-state", "data-state": kind, title: stateLabel, "aria-label": stateLabel }),
+            h(
+              "span",
+              { className: "dshp-attention-row-copy" },
+              h("div", { className: "dshp-attention-row-title" }, sessionTitle(session, t)),
+              meta ? h("div", { className: "dshp-attention-row-meta" }, meta) : null
+            )
+          );
+        })
+      ];
+    })
   );
 }
 function GlobalSearchResults({ query, projects, sessionState, archived, remote, limit, onOpenProject, onOpenSession, t }) {
@@ -1296,49 +1803,58 @@ function GlobalSearchResults({ query, projects, sessionState, archived, remote, 
   sessionMatches.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   for (const item of remote.items || []) include(sessionState.byId[item.sessionId]);
   const boundedSessions = sessionMatches.slice(0, limit);
+  const sessionsByProject = /* @__PURE__ */ new Map();
+  const recent = [];
+  for (const session of boundedSessions) {
+    const project = projectBySession.get(session.id);
+    if (!project) recent.push(session);
+    else {
+      const list = sessionsByProject.get(project.workspaceId) || [];
+      list.push(session);
+      sessionsByProject.set(project.workspaceId, list);
+    }
+  }
+  const matchedProjectIds = new Set(projectMatches.map((project) => project.workspaceId));
+  const groupedProjects = projects.filter((project) => matchedProjectIds.has(project.workspaceId) || sessionsByProject.has(project.workspaceId));
+  const renderChat = (session) => {
+    const snippet = contentBySession.get(session.id);
+    const state = sessionStateKind(session);
+    const stateLabel = sessionStatusLabel(session, t);
+    return h(
+      "button",
+      { key: `session-${session.id}`, type: "button", className: "dshp-search-chat", onClick: () => onOpenSession(session.id) },
+      state ? h("i", { className: "dshp-session-state", "data-state": state, title: stateLabel, "aria-label": stateLabel }) : null,
+      h(
+        "span",
+        { className: "dshp-search-chat-copy" },
+        h("div", { className: "dshp-search-chat-title" }, highlighted(sessionTitle(session, t), query)),
+        snippet ? h("div", { className: "dshp-search-chat-snippet", title: snippet }, highlighted(snippet, query)) : null
+      )
+    );
+  };
   return h(
     "div",
     { className: "dshp-search-results" },
-    projectMatches.length ? h(
-      React.Fragment,
-      null,
-      h("div", { className: "dshp-result-group" }, t("projectResult")),
-      ...projectMatches.slice(0, 8).map((project) => h(
+    ...groupedProjects.slice(0, 8).map((project) => h(
+      "div",
+      { key: `group-${project.workspaceId}`, className: "dshp-search-group" },
+      h(
         "button",
-        { key: `project-${project.workspaceId}`, type: "button", className: "dshp-search-result", onClick: () => onOpenProject(project.workspaceId) },
-        h("span", { className: "dshp-search-result-icon" }, h(Icon, { name: "folder", size: 17 })),
-        h(
-          "span",
-          { className: "dshp-search-result-copy" },
-          h("div", { className: "dshp-search-result-title" }, project.title),
-          h("div", { className: "dshp-search-result-meta", title: project.path }, project.path)
-        )
-      ))
-    ) : null,
-    boundedSessions.length ? h(
-      React.Fragment,
-      null,
-      h("div", { className: "dshp-result-group" }, t("chatResult")),
-      ...boundedSessions.map((session) => {
-        const project = projectBySession.get(session.id);
-        const snippet = contentBySession.get(session.id);
-        return h(
-          "button",
-          { key: `session-${session.id}`, type: "button", className: "dshp-search-result", onClick: () => onOpenSession(session.id) },
-          h("span", { className: "dshp-search-result-icon" }, h(Icon, { name: "chat", size: 17 })),
-          h(
-            "span",
-            { className: "dshp-search-result-copy" },
-            h("div", { className: "dshp-search-result-title" }, sessionTitle(session, t)),
-            snippet ? h("div", { className: "dshp-search-result-snippet", title: snippet }, snippet) : null,
-            project ? h("div", { className: "dshp-search-result-meta" }, project.title) : null
-          )
-        );
-      })
+        { type: "button", className: "dshp-search-group-title", title: project.path, onClick: () => onOpenProject(project.workspaceId) },
+        h(Icon, { name: "folder", size: 16 }),
+        h("span", null, highlighted(project.title, query))
+      ),
+      ...(sessionsByProject.get(project.workspaceId) || []).map(renderChat)
+    )),
+    recent.length ? h(
+      "div",
+      { className: "dshp-search-group" },
+      h("div", { className: "dshp-result-group" }, t("recent")),
+      ...recent.map(renderChat)
     ) : null,
     remote.status === "loading" ? h("div", { className: "dshp-search-status", role: "status" }, t("searching")) : null,
     remote.status === "error" ? h("div", { className: "dshp-search-status", role: "status" }, t("searchUnavailable")) : null,
-    remote.status !== "loading" && !projectMatches.length && !boundedSessions.length ? h("div", { className: "dshp-search-status" }, t("noMatches")) : null,
+    remote.status !== "loading" && !groupedProjects.length && !recent.length ? h("div", { className: "dshp-search-status" }, t("noMatches")) : null,
     remote.hasMore || projectMatches.length > 8 || sessionMatches.length > limit ? h("div", { className: "dshp-search-status" }, t("searchMore")) : null
   );
 }
@@ -1416,6 +1932,7 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
   const [expanded, setExpanded] = React.useState(() => /* @__PURE__ */ new Set());
   const [menu, setMenu] = React.useState(null);
   const [editTarget, setEditTarget] = React.useState(null);
+  const [groupTarget, setGroupTarget] = React.useState(null);
   const [confirm, setConfirm] = React.useState(null);
   const [confirmBusy, setConfirmBusy] = React.useState(false);
   const [confirmError, setConfirmError] = React.useState("");
@@ -1430,7 +1947,10 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
   const searchInputRef = React.useRef(null);
   const defaultBootRef = React.useRef(false);
   const allProjects = workspaceState.items || [];
-  const projects = allProjects.filter((project) => !isDefaultWorkspace(project));
+  const rawProjects = React.useMemo(() => allProjects.filter((project) => !isDefaultWorkspace(project)), [allProjects, isDefaultWorkspace]);
+  const canEditProjectGroups = prefs.projectGroups.supported !== false;
+  const groupComposition = React.useMemo(() => composeProjectGroups(rawProjects, canEditProjectGroups ? prefs.projectGroups.groups : []), [rawProjects, canEditProjectGroups, prefs.projectGroups]);
+  const projects = groupComposition.projects;
   const archived = new Set(workspaceState.archivedSessionIds || []);
   const accounted = new Set(projects.flatMap((project) => project.sessionIds || []));
   const pinnedProjects = new Set(prefs.pinnedProjects);
@@ -1516,13 +2036,14 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
     });
   })();
   const projectForSession = (sessionId) => projects.find((project) => (project.sessionIds || []).includes(sessionId));
+  const startProject = (projectId) => startSession(resolveProjectWorkspaceId(projectId, projects));
   if (!wide) {
     return h(
       "div",
       { className: "dshp-sidebar dshp-rail" },
       orderedProjects.slice(0, 7).map((project) => h("button", { key: project.workspaceId, type: "button", className: "dshp-rail-button", title: project.title, onClick: () => {
         expandSidebar();
-        startSession(project.workspaceId);
+        startProject(project.workspaceId);
       } }, h(Icon, { name: "folder", size: 20 })))
     );
   }
@@ -1541,7 +2062,7 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
   };
   const openSearchProject = (workspaceId) => {
     closeSearch();
-    startSession(workspaceId);
+    startProject(workspaceId);
   };
   const openSearchSession = (sessionId) => {
     closeSearch();
@@ -1555,26 +2076,38 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
     { type: "label", id: "order-label", label: t("chatOrder") },
     { id: "order-priority", label: t("priority"), checked: prefs.orderBy === "priority", onClick: () => setPrefs((current) => ({ ...current, orderBy: "priority" })) },
     { id: "order-updated", label: t("recentlyUpdated"), checked: prefs.orderBy === "updated", onClick: () => setPrefs((current) => ({ ...current, orderBy: "updated" })) },
-    { id: "order-manual", label: t("manualOrder"), checked: prefs.orderBy === "manual", onClick: () => setPrefs((current) => ({ ...current, orderBy: "manual" })) }
+    { id: "order-manual", label: t("manualOrder"), checked: prefs.orderBy === "manual", onClick: () => setPrefs((current) => ({ ...current, orderBy: "manual" })) },
+    { type: "separator", id: "picker-sep" },
+    { type: "label", id: "picker-label", label: t("pickerStart") },
+    { id: "picker-last", label: t("pickerLast"), checked: prefs.pickerStart === "last", onClick: () => setPrefs((current) => ({ ...current, pickerStart: "last" })) },
+    { id: "picker-desktop", label: t("pickerDesktop"), checked: prefs.pickerStart === "desktop", onClick: () => setPrefs((current) => ({ ...current, pickerStart: "desktop" })) },
+    { id: "picker-home", label: t("pickerHome"), checked: prefs.pickerStart === "home", onClick: () => setPrefs((current) => ({ ...current, pickerStart: "home" })) },
+    { id: "picker-project-parent", label: t("pickerProjectParent"), checked: prefs.pickerStart === "project-parent", onClick: () => setPrefs((current) => ({ ...current, pickerStart: "project-parent" })) },
+    { type: "separator", id: "attention-sep" },
+    { type: "label", id: "attention-label", label: t("attentionDisplay") },
+    { id: "attention-off", label: t("attentionOff"), checked: prefs.attentionMode === "off", onClick: () => setPrefs((current) => ({ ...current, attentionMode: "off" })) },
+    { id: "attention-compact", label: t("attentionCompact"), checked: prefs.attentionMode === "compact", onClick: () => setPrefs((current) => ({ ...current, attentionMode: "compact" })) },
+    { id: "attention-expanded", label: t("attentionExpanded"), checked: prefs.attentionMode === "expanded", onClick: () => setPrefs((current) => ({ ...current, attentionMode: "expanded" })) }
   ];
   const selectedProject = menu?.kind === "project" ? menu.target : null;
   const projectMenuItems = selectedProject ? [
     { id: "pin-project", label: pinnedProjects.has(selectedProject.workspaceId) ? t("unpinProject") : t("pinProject"), icon: "pin", onClick: () => togglePref("pinnedProjects", selectedProject.workspaceId) },
     { id: "favorite-project", label: favoriteProjects.has(selectedProject.workspaceId) ? t("unfavoriteProject") : t("favoriteProject"), icon: "star", onClick: () => togglePref("favoriteProjects", selectedProject.workspaceId) },
     { id: "open-project", label: t("openExplorer"), icon: "external", onClick: () => run(() => openPath(selectedProject.path)) },
-    { id: "edit-project", label: t("editProject"), icon: "edit", onClick: () => setEditTarget(selectedProject) },
+    selectedProject.advancedGroup ? { id: "edit-group", label: t("editGroup"), icon: "list", onClick: () => setGroupTarget(selectedProject) } : { id: "edit-project", label: t("editProject"), icon: "edit", onClick: () => setEditTarget(selectedProject) },
+    selectedProject.advancedGroup ? { id: "dissolve-group", label: t("dissolveGroup"), icon: "close", onClick: () => setPrefs((current) => ({ ...current, projectGroups: createProjectGroupManifest(removeProjectGroup(current.projectGroups.groups, selectedProject.groupId)), pinnedProjects: current.pinnedProjects.filter((id) => id !== selectedProject.workspaceId), favoriteProjects: current.favoriteProjects.filter((id) => id !== selectedProject.workspaceId) })) } : canEditProjectGroups ? { id: "group-folders", label: t("groupFolders"), icon: "list", onClick: () => setGroupTarget(selectedProject) } : null,
     { type: "separator", id: "project-sep" },
     { id: "archive-project", label: t("archiveChats"), icon: "archive", onClick: () => {
       setConfirmError("");
       setConfirm({ kind: "archive", project: selectedProject });
     } },
-    { id: "remove-project", label: t("removeProject"), icon: "close", danger: true, onClick: () => {
+    selectedProject.advancedGroup ? null : { id: "remove-project", label: t("removeProject"), icon: "close", danger: true, onClick: () => {
       setConfirmError("");
       setConfirm({ kind: "remove", project: selectedProject });
     } }
-  ] : [];
+  ].filter(Boolean) : [];
   const dragPropsForProject = (project) => ({
-    draggable: prefs.orderBy === "manual",
+    draggable: prefs.orderBy === "manual" && !project.advancedGroup,
     dragOver: dragOver?.key === `project:${project.workspaceId}` ? dragOver.after ? "after" : "before" : null,
     onDragStart: (event) => {
       event.dataTransfer.effectAllowed = "move";
@@ -1606,7 +2139,7 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
     }
   });
   const dragPropsForSession = (session, workspaceId, flat) => ({
-    draggable: prefs.orderBy === "manual",
+    draggable: prefs.orderBy === "manual" && (flat || !workspaceId.startsWith("dshp-group:")),
     dragOver: dragOver?.key === `session:${session.id}` ? dragOver.after ? "after" : "before" : null,
     onDragStart: (event) => {
       event.dataTransfer.effectAllowed = "move";
@@ -1701,6 +2234,7 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
           )
         ),
         actionError ? h("div", { className: "dshp-action-error" }, actionError) : null,
+        !searchOpen && prefs.attentionMode === "expanded" ? h(AttentionPanel, { sessions: uniqueFlat, projectForSession, onOpen: openSession, t }) : null,
         searchOpen ? h(
           React.Fragment,
           null,
@@ -1726,8 +2260,9 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
               sessions,
               pinned: pinnedProjects.has(project.workspaceId),
               favorite: favoriteProjects.has(project.workspaceId),
+              showAttentionBadge: prefs.attentionMode !== "off",
               menuOpen: menu?.kind === "project" && menu.target?.workspaceId === project.workspaceId,
-              onStart: startSession,
+              onStart: startProject,
               onMenu: (event, target) => openMenuAt(event, "project", target),
               t,
               ...dragPropsForProject(project)
@@ -1753,6 +2288,7 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
     h(CreateProjectModal, {
       open: createOpen,
       projects: allProjects,
+      currentProjectPath: projectForSession(sessionState.current)?.path || "",
       createWorkspace,
       renameWorkspace,
       pickDirectory,
@@ -1765,6 +2301,14 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
       t
     }),
     h(EditProjectModal, { project: editTarget, projects, renameWorkspace, onClose: () => setEditTarget(null), t }),
+    h(ProjectGroupModal, {
+      project: groupTarget,
+      workspaces: rawProjects,
+      groups: groupComposition.groups,
+      onSave: (group) => setPrefs((current) => ({ ...current, projectGroups: createProjectGroupManifest(upsertProjectGroup(current.projectGroups.groups, group, rawProjects)) })),
+      onClose: () => setGroupTarget(null),
+      t
+    }),
     h(ConfirmModal, { request: confirm, busy: confirmBusy, error: confirmError, onConfirm: confirmAction, onClose: () => {
       if (!confirmBusy) setConfirm(null);
     }, t }),
@@ -1800,16 +2344,23 @@ function apply(ctx) {
     return workspace.workspaceId;
   };
   const isDefaultWorkspace = (workspace) => defaultWorkspace.isDefaultWorkspace(workspace);
-  const pickDirectory = async () => {
+  const pickDirectory = async (options = {}) => {
+    const pickerStart = readSidebarPrefs().pickerStart;
+    const startLocation = pickerStart === "home" ? "home" : "desktop";
+    const defaultPath = pickerStart === "last" ? readPickerParent() : pickerStart === "project-parent" ? parentDirectory(options.currentProjectPath) : "";
     if (ctx.connection?.isLoopback && ctx.connection?.rpc?.call) {
       try {
-        const result = await ctx.connection.rpc.call("/dsh-projects", "pickDirectory", {});
-        return unwrapNativeDirectoryResult(result);
+        const result = await ctx.connection.rpc.call("/dsh-projects", "pickDirectory", { startLocation, ...defaultPath ? { defaultPath } : {} });
+        const selected2 = unwrapNativeDirectoryResult(result);
+        rememberPickerParent(selected2);
+        return selected2;
       } catch (reason) {
         console.warn("[dsh-projects] native directory bridge unavailable; falling back", reason);
       }
     }
-    return ctx.workspaces.pickDirectory();
+    const selected = await ctx.workspaces.pickDirectory();
+    rememberPickerParent(selected);
+    return selected;
   };
   const injected = () => ({
     createWorkspace: (input) => ctx.workspaces.create(input),
