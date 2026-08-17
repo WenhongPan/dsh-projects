@@ -1,7 +1,10 @@
 /** Loopback-only native directory picker bridge for dsh-projects. */
 
+import { allocateDefaultWorkspace } from "./default-workspace-host.js";
+
 const BRIDGE_CHANNEL = "/dsh-projects";
 const PICK_DIRECTORY_ENDPOINT = "pickDirectory";
+const ALLOCATE_DEFAULT_WORKSPACE_ENDPOINT = "allocateDefaultWorkspace";
 const SUPPORTED_PLATFORMS = new Set(["win32", "darwin", "linux"]);
 
 function isPlainObject(value) {
@@ -49,15 +52,23 @@ async function pickNativeDirectory(signal, internals = {}) {
 
 function createNativeBridgeHandler(internals = {}) {
   return async (endpoint, payload, signal) => {
-    if (endpoint !== PICK_DIRECTORY_ENDPOINT) {
-      throw new Error(`dsh-projects: unknown native bridge endpoint ${JSON.stringify(endpoint)}`);
-    }
-    if (!isPlainObject(payload) || Object.keys(payload).length !== 0) {
-      throw new Error("dsh-projects: pickDirectory payload must be an empty object");
-    }
     try {
-      const path = await pickNativeDirectory(signal, internals);
-      return { ok: true, value: { path } };
+      if (endpoint !== PICK_DIRECTORY_ENDPOINT && endpoint !== ALLOCATE_DEFAULT_WORKSPACE_ENDPOINT) {
+        throw new Error(`dsh-projects: unknown native bridge endpoint ${JSON.stringify(endpoint)}`);
+      }
+      if (!isPlainObject(payload) || Object.keys(payload).length !== 0) {
+        throw new Error("dsh-projects: bridge payload must be an empty object");
+      }
+      if (endpoint === PICK_DIRECTORY_ENDPOINT) {
+        const path = await pickNativeDirectory(signal, internals);
+        return { ok: true, value: { path } };
+      }
+      if (endpoint === ALLOCATE_DEFAULT_WORKSPACE_ENDPOINT) {
+        return {
+          ok: true,
+          value: await allocateDefaultWorkspace(internals.defaultWorkspace)
+        };
+      }
     } catch (reason) {
       return {
         ok: false,
@@ -80,6 +91,7 @@ function registerNativeBridge(ctx, internals = {}) {
 }
 
 export {
+  ALLOCATE_DEFAULT_WORKSPACE_ENDPOINT,
   BRIDGE_CHANNEL,
   PICK_DIRECTORY_ENDPOINT,
   createNativeBridgeHandler,

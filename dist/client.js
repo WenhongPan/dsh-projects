@@ -47,6 +47,20 @@ var require_default_workspace = __commonJS({
       } catch {
       }
     }
+    function isAllocatedDefaultWorkspace(value) {
+      return value !== null && typeof value === "object" && typeof value.path === "string" && typeof value.root === "string";
+    }
+    function unwrapDefaultWorkspaceResult2(result) {
+      if (isAllocatedDefaultWorkspace(result)) return result;
+      if (result !== null && typeof result === "object" && result.ok === true) {
+        if (isAllocatedDefaultWorkspace(result.value)) return result.value;
+        throw new Error("default workspace bridge returned an invalid success result");
+      }
+      if (result !== null && typeof result === "object" && result.ok === false) {
+        throw new Error(typeof result.error?.message === "string" ? result.error.message : "default workspace bridge failed");
+      }
+      throw new Error("default workspace bridge returned an invalid result");
+    }
     function createDefaultWorkspaceManager2({
       workspaces,
       storage,
@@ -91,7 +105,10 @@ var require_default_workspace = __commonJS({
         const storedRoot = safeGet(storage, DEFAULT_ROOT_KEY);
         return Boolean(legacyId && workspace.workspaceId === legacyId) || isPathInside(workspace.path, storedRoot) || isPortableDefaultPath(workspace.path);
       };
-      return { allocateSessionRoot, isDefaultWorkspace, resolveRoot };
+      const rememberRoot = (root) => {
+        if (typeof root === "string" && root) safeSet(storage, DEFAULT_ROOT_KEY, root);
+      };
+      return { allocateSessionRoot, isDefaultWorkspace, rememberRoot, resolveRoot };
     }
     module2.exports = {
       DEFAULT_ROOT_KEY,
@@ -101,7 +118,8 @@ var require_default_workspace = __commonJS({
       isPortableDefaultPath,
       localDateSegment,
       nextSessionFolderName,
-      normalizePath
+      normalizePath,
+      unwrapDefaultWorkspaceResult: unwrapDefaultWorkspaceResult2
     };
   }
 });
@@ -131,7 +149,7 @@ var require_native_picker_result = __commonJS({
 // src/client.cjs
 var React = require("react");
 var ReactDOM = require("react-dom");
-var { createDefaultWorkspaceManager } = require_default_workspace();
+var { createDefaultWorkspaceManager, unwrapDefaultWorkspaceResult } = require_default_workspace();
 var { unwrapNativeDirectoryResult } = require_native_picker_result();
 var h = React.createElement;
 var NS = "dsh-projects";
@@ -1713,7 +1731,19 @@ function apply(ctx) {
     storage: localStorage
   });
   const startDefaultSession = async () => {
-    const cwd = await defaultWorkspace.allocateSessionRoot();
+    let cwd;
+    if (ctx.connection?.isLoopback && ctx.connection?.rpc?.call) {
+      const result = await ctx.connection.rpc.call(
+        "/dsh-projects",
+        "allocateDefaultWorkspace",
+        {}
+      );
+      const allocation = unwrapDefaultWorkspaceResult(result);
+      defaultWorkspace.rememberRoot(allocation.root);
+      cwd = allocation.path;
+    } else {
+      cwd = await defaultWorkspace.allocateSessionRoot();
+    }
     const workspace = await ctx.workspaces.create({ path: cwd });
     ctx.workspaces.startSession(workspace.workspaceId);
     return workspace.workspaceId;

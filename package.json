@@ -1,7 +1,7 @@
 {
   "name": "dsh-projects",
   "version": "0.2.0-alpha.2",
-  "description": "Project-oriented workspace and session management for DeepSeek Harness.",
+  "description": "Codex-like projects, searchable sessions, native folder picking, and sidebar organization for DeepSeek Harness.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -12,18 +12,23 @@
   "files": [
     "dist/client.js",
     "src/index.js",
+    "src/default-workspace-host.js",
     "src/native-bridge.js",
     "cordis.patch.yml",
     "README.md",
     "README.en.md",
     "CHANGELOG.md",
     "SECURITY.md",
-    "docs/**",
+    "docs/*.md",
+    "docs/assets/demo.gif",
+    "docs/assets/picker.webp",
+    "docs/assets/create.webp",
+    "docs/assets/native.webp",
     "LICENSE"
   ],
   "scripts": {
     "build": "node build.mjs",
-    "check": "node --check src/client.cjs && node --check src/index.js && node --check src/native-bridge.js && node --check src/core/default-workspace.cjs && node --check src/core/native-picker-result.cjs",
+    "check": "node --check src/client.cjs && node --check src/index.js && node --check src/default-workspace-host.js && node --check src/native-bridge.js && node --check src/core/default-workspace.cjs && node --check src/core/native-picker-result.cjs",
     "test": "node --test",
     "verify": "npm run check && npm run build && npm test",
     "prepack": "npm run verify"
@@ -51,6 +56,9 @@
     "dsh",
     "deepseek-harness",
     "projects",
+    "sessions",
+    "sidebar",
+    "native-picker",
     "workspace",
     "plugin"
   ],

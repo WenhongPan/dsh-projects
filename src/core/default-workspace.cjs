@@ -44,6 +44,27 @@ function safeSet(storage, key, value) {
   catch {}
 }
 
+function isAllocatedDefaultWorkspace(value) {
+  return value !== null
+    && typeof value === "object"
+    && typeof value.path === "string"
+    && typeof value.root === "string";
+}
+
+function unwrapDefaultWorkspaceResult(result) {
+  if (isAllocatedDefaultWorkspace(result)) return result;
+  if (result !== null && typeof result === "object" && result.ok === true) {
+    if (isAllocatedDefaultWorkspace(result.value)) return result.value;
+    throw new Error("default workspace bridge returned an invalid success result");
+  }
+  if (result !== null && typeof result === "object" && result.ok === false) {
+    throw new Error(typeof result.error?.message === "string"
+      ? result.error.message
+      : "default workspace bridge failed");
+  }
+  throw new Error("default workspace bridge returned an invalid result");
+}
+
 function createDefaultWorkspaceManager({
   workspaces,
   storage,
@@ -95,7 +116,11 @@ function createDefaultWorkspaceManager({
       || isPortableDefaultPath(workspace.path);
   };
 
-  return { allocateSessionRoot, isDefaultWorkspace, resolveRoot };
+  const rememberRoot = (root) => {
+    if (typeof root === "string" && root) safeSet(storage, DEFAULT_ROOT_KEY, root);
+  };
+
+  return { allocateSessionRoot, isDefaultWorkspace, rememberRoot, resolveRoot };
 }
 
 module.exports = {
@@ -106,5 +131,6 @@ module.exports = {
   isPortableDefaultPath,
   localDateSegment,
   nextSessionFolderName,
-  normalizePath
+  normalizePath,
+  unwrapDefaultWorkspaceResult
 };

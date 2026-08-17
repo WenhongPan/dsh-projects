@@ -1,6 +1,6 @@
     const React = require("react");
     const ReactDOM = require("react-dom");
-    const { createDefaultWorkspaceManager } = require("./core/default-workspace.cjs");
+    const { createDefaultWorkspaceManager, unwrapDefaultWorkspaceResult } = require("./core/default-workspace.cjs");
     const { unwrapNativeDirectoryResult } = require("./core/native-picker-result.cjs");
     const h = React.createElement;
 
@@ -1374,7 +1374,19 @@
         storage: localStorage
       });
       const startDefaultSession = async () => {
-        const cwd = await defaultWorkspace.allocateSessionRoot();
+        let cwd;
+        if (ctx.connection?.isLoopback && ctx.connection?.rpc?.call) {
+          const result = await ctx.connection.rpc.call(
+            "/dsh-projects",
+            "allocateDefaultWorkspace",
+            {}
+          );
+          const allocation = unwrapDefaultWorkspaceResult(result);
+          defaultWorkspace.rememberRoot(allocation.root);
+          cwd = allocation.path;
+        } else {
+          cwd = await defaultWorkspace.allocateSessionRoot();
+        }
         const workspace = await ctx.workspaces.create({ path: cwd });
         ctx.workspaces.startSession(workspace.workspaceId);
         return workspace.workspaceId;
