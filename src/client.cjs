@@ -1,6 +1,7 @@
     const React = require("react");
     const ReactDOM = require("react-dom");
     const { createDefaultWorkspaceManager } = require("./core/default-workspace.cjs");
+    const { unwrapNativeDirectoryResult } = require("./core/native-picker-result.cjs");
     const h = React.createElement;
 
     const NS = "dsh-projects";
@@ -1360,7 +1361,7 @@
       );
     }
 
-    const inject = ["slots", "locale", "sessions", "workspaces"];
+    const inject = ["slots", "locale", "sessions", "workspaces", "connection"];
     const name = "dsh-projects";
 
     function apply(ctx) {
@@ -1380,10 +1381,22 @@
       };
       const isDefaultWorkspace = (workspace) => defaultWorkspace.isDefaultWorkspace(workspace);
 
+      const pickDirectory = async () => {
+        if (ctx.connection?.isLoopback && ctx.connection?.rpc?.call) {
+          try {
+            const result = await ctx.connection.rpc.call("/dsh-projects", "pickDirectory", {});
+            return unwrapNativeDirectoryResult(result);
+          } catch (reason) {
+            console.warn("[dsh-projects] native directory bridge unavailable; falling back", reason);
+          }
+        }
+        return ctx.workspaces.pickDirectory();
+      };
+
       const injected = () => ({
         createWorkspace: (input) => ctx.workspaces.create(input),
         renameWorkspace: (workspaceId, title) => ctx.workspaces.rename(workspaceId, title),
-        pickDirectory: () => ctx.workspaces.pickDirectory(),
+        pickDirectory,
         listDirectory: (path, signal) => ctx.workspaces.listDirectory(path, signal),
         openSession: (sessionId) => ctx.sessions.open(sessionId),
         startSession: (workspaceId) => ctx.workspaces.startSession(workspaceId),

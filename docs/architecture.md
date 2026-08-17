@@ -11,7 +11,9 @@ Removing the plugin therefore restores the stock DSH surfaces without deleting p
 
 ## Runtime halves
 
-`src/index.js` is a no-op Host entry used to mount the plugin bundle. `src/client.cjs` contributes the project picker and sidebar UI. `build.mjs` bundles the browser source and wraps it for the DSH module loader as `dist/client.js`.
+`src/index.js` registers a generic Connection RPC channel at `/dsh-projects`. The channel uses `authority: loopback`, accepts only an empty `pickDirectory` request, and returns a selected absolute Host path or `null`. `src/client.cjs` contributes the project picker and sidebar UI. `build.mjs` bundles the browser source and wraps it for the DSH module loader as `dist/client.js`.
+
+Inside Electron, the bridge calls `dialog.showOpenDialog()` in the existing main process. In an ordinary local Web Host it delegates to `@deepseek-ai/dsh-host-directory-picker-native`. Non-loopback pages never call the bridge; any bridge failure falls back to the stock Workspace picker and then the plugin's directory browser.
 
 ## Default chats
 
@@ -30,4 +32,4 @@ Generated Workspaces are hidden from the project list and their sessions appear 
 
 ## Compatibility boundaries
 
-The public plugin must not patch files inside DSH or another plugin's `node_modules`. Missing capabilities should degrade visibly. In particular, archive restore must use a future public DSH API rather than redefining `archiveSession` semantics.
+The public plugin must not patch files inside DSH or another plugin's `node_modules`. The native bridge is an optional, narrowly scoped Host capability and does not replace DSH's `directoryPicker` service. Missing capabilities should degrade visibly. In particular, archive restore must use a future public DSH API rather than redefining `archiveSession` semantics.

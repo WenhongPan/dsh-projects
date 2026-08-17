@@ -1,6 +1,6 @@
 {
   "name": "dsh-projects",
-  "version": "0.1.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "description": "Project-oriented workspace and session management for DeepSeek Harness.",
   "type": "module",
   "main": "./src/index.js",
@@ -12,14 +12,18 @@
   "files": [
     "dist/client.js",
     "src/index.js",
+    "src/native-bridge.js",
     "cordis.patch.yml",
     "README.md",
     "README.en.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "docs/**",
     "LICENSE"
   ],
   "scripts": {
     "build": "node build.mjs",
-    "check": "node --check src/client.cjs && node --check src/index.js && node --check src/core/default-workspace.cjs",
+    "check": "node --check src/client.cjs && node --check src/index.js && node --check src/native-bridge.js && node --check src/core/default-workspace.cjs && node --check src/core/native-picker-result.cjs",
     "test": "node --test",
     "verify": "npm run check && npm run build && npm test",
     "prepack": "npm run verify"
@@ -56,12 +60,14 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-client-connection": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-conversation": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-sidebar": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-slots": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-workspace": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-host-directory-picker-native": "^0.1.0-rc.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

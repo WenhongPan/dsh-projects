@@ -106,10 +106,33 @@ var require_default_workspace = __commonJS({
   }
 });
 
+// src/core/native-picker-result.cjs
+var require_native_picker_result = __commonJS({
+  "src/core/native-picker-result.cjs"(exports2, module2) {
+    function isDirectoryPathResult(value) {
+      return value !== null && typeof value === "object" && (typeof value.path === "string" || value.path === null);
+    }
+    function unwrapNativeDirectoryResult2(result) {
+      if (isDirectoryPathResult(result)) return result.path;
+      if (result !== null && typeof result === "object" && result.ok === true) {
+        if (isDirectoryPathResult(result.value)) return result.value.path;
+        throw new Error("native directory bridge returned an invalid success result");
+      }
+      if (result !== null && typeof result === "object" && result.ok === false) {
+        const message = typeof result.error?.message === "string" ? result.error.message : "native directory bridge failed";
+        throw new Error(message);
+      }
+      throw new Error("native directory bridge returned an invalid result");
+    }
+    module2.exports = { unwrapNativeDirectoryResult: unwrapNativeDirectoryResult2 };
+  }
+});
+
 // src/client.cjs
 var React = require("react");
 var ReactDOM = require("react-dom");
 var { createDefaultWorkspaceManager } = require_default_workspace();
+var { unwrapNativeDirectoryResult } = require_native_picker_result();
 var h = React.createElement;
 var NS = "dsh-projects";
 var dictionaries = {
@@ -1679,7 +1702,7 @@ function SidebarProjects({ wide, expandSidebar, useWorkspaces, useSessions, open
     h(ArchiveCenterModal, { open: archiveOpen, archivedIds: workspaceState.archivedSessionIds || [], projects, sessionState, restoreSession, onClose: () => setArchiveOpen(false), t })
   );
 }
-var inject = ["slots", "locale", "sessions", "workspaces"];
+var inject = ["slots", "locale", "sessions", "workspaces", "connection"];
 var name = "dsh-projects";
 function apply(ctx) {
   installStyles();
@@ -1696,10 +1719,21 @@ function apply(ctx) {
     return workspace.workspaceId;
   };
   const isDefaultWorkspace = (workspace) => defaultWorkspace.isDefaultWorkspace(workspace);
+  const pickDirectory = async () => {
+    if (ctx.connection?.isLoopback && ctx.connection?.rpc?.call) {
+      try {
+        const result = await ctx.connection.rpc.call("/dsh-projects", "pickDirectory", {});
+        return unwrapNativeDirectoryResult(result);
+      } catch (reason) {
+        console.warn("[dsh-projects] native directory bridge unavailable; falling back", reason);
+      }
+    }
+    return ctx.workspaces.pickDirectory();
+  };
   const injected = () => ({
     createWorkspace: (input) => ctx.workspaces.create(input),
     renameWorkspace: (workspaceId, title) => ctx.workspaces.rename(workspaceId, title),
-    pickDirectory: () => ctx.workspaces.pickDirectory(),
+    pickDirectory,
     listDirectory: (path, signal) => ctx.workspaces.listDirectory(path, signal),
     openSession: (sessionId) => ctx.sessions.open(sessionId),
     startSession: (workspaceId) => ctx.workspaces.startSession(workspaceId),
