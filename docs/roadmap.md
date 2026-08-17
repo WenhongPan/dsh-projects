@@ -9,20 +9,21 @@
 - Keep the native directory bridge aligned with upstream DSH interfaces.
 - Improve diagnostics when optional chat-content search is unavailable.
 - Restore archived sessions when the installed DSH version exposes a supported unarchive API.
+- Exercise waiting-for-input, running, and completed reminders against real long-running sessions.
 
 ## Next candidates
 
-- Export and import sidebar preferences such as pins, favorites, and manual ordering.
-- Add a compact project information view with its folder, task count, and recent activity.
 - Improve keyboard navigation and screen-reader labels across menus and dialogs.
 - Add compatibility checks for common sidebar, session, and directory-picker plugins.
-- Offer an opt-in project template flow without creating or copying files unexpectedly.
+- Stabilize the optional attention summary with Off, Compact, and Expanded modes.
+- Stabilize Phase 1 multi-folder grouping before considering project instructions, project memory, or any prompt injection.
 
 ## Later exploration
 
 - Project-scoped session handoff summaries.
 - Optional project tags and filters.
 - Portable project metadata that can be shared without including chat content or local absolute paths.
+- Export/import of sidebar preferences and a compact project overview, deferred until user demand justifies them.
 
 ## Non-goals
 

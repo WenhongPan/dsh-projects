@@ -6,6 +6,14 @@ All notable changes to this project will be documented here.
 
 - Add Arrow Up/Down and Enter navigation to the project picker, including active-option accessibility metadata.
 - Add structured bug, compatibility, and feature-request forms plus a public product roadmap.
+- Start the Desktop native directory chooser on the system Desktop, then remember the last selected folder's parent and safely fall back when it no longer exists.
+- Group global-search results directly under their projects, keep unassigned chats under Recent, and highlight matching text.
+- Show DSH-native waiting-for-input, running, and completed reminders in session rows, with per-project attention counts.
+- Add Off, Compact, and Expanded attention-display modes; Expanded groups native waiting, running, and completed Sessions and opens them directly.
+- Add an opt-in multi-folder project layer that groups existing DSH Workspaces, keeps one explicit primary Workspace for new Sessions, and dissolves without moving files or chats.
+- Version the multi-folder manifest, migrate the pre-release array format, and preserve unknown future formats without interpreting or overwriting them.
+- Keep DSH's existing session-fork action instead of adding a duplicate project-plugin menu item.
+- Improve keyboard and screen-reader behavior for project menus and multi-folder dialogs, and reject corrupted duplicate group identifiers.
 
 ## 0.2.0-alpha.2 - 2026-08-17
 

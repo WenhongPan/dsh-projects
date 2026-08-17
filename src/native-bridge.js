@@ -1,6 +1,7 @@
 /** Loopback-only native directory picker bridge for dsh-projects. */
 
 import { allocateDefaultWorkspace } from "./default-workspace-host.js";
+import { stat } from "node:fs/promises";
 
 const BRIDGE_CHANNEL = "/dsh-projects";
 const PICK_DIRECTORY_ENDPOINT = "pickDirectory";
@@ -15,12 +16,28 @@ function isElectronRuntime(versions = process.versions) {
   return typeof versions?.electron === "string" && versions.electron.length > 0;
 }
 
-async function pickWithElectron(signal, loadElectron = () => import("electron")) {
+async function existingDirectory(path, inspect = stat) {
+  if (!path) return false;
+  try {
+    return (await inspect(path)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function pickWithElectron(signal, loadElectron = () => import("electron"), request = {}) {
   if (signal.aborted) throw new Error("native directory picker aborted");
-  const { BrowserWindow, dialog } = await loadElectron();
+  const { app, BrowserWindow, dialog } = await loadElectron();
+  const fallbackLocation = request.startLocation === "home" ? "home" : "desktop";
+  const fallbackPath = app?.getPath?.(fallbackLocation) ?? "";
+  const requested = typeof request.defaultPath === "string" ? request.defaultPath : "";
+  const defaultPath = await existingDirectory(requested, request.inspectPath)
+    ? requested
+    : fallbackPath;
   const options = {
     title: "Select Project Root",
-    properties: ["openDirectory", "createDirectory"]
+    properties: ["openDirectory", "createDirectory"],
+    ...(defaultPath ? { defaultPath } : {})
   };
   const parent = BrowserWindow?.getFocusedWindow?.() ?? null;
   const result = parent
@@ -39,15 +56,23 @@ async function pickWithDshNative(signal, loadNativePicker = () => import("@deeps
   return pickNativeDirectory(signal);
 }
 
-async function pickNativeDirectory(signal, internals = {}) {
+async function pickNativeDirectory(signal, internals = {}, request = {}) {
   const platform = internals.platform ?? process.platform;
   if (!SUPPORTED_PLATFORMS.has(platform)) {
     throw new Error(`native directory picker is unsupported on ${platform}`);
   }
   const electron = internals.electron ?? isElectronRuntime(internals.versions);
   return electron
-    ? pickWithElectron(signal, internals.loadElectron)
+    ? pickWithElectron(signal, internals.loadElectron, { defaultPath: request.defaultPath, startLocation: request.startLocation, inspectPath: internals.inspectPath })
     : pickWithDshNative(signal, internals.loadNativePicker);
+}
+
+function validPickerPayload(payload) {
+  if (!isPlainObject(payload)) return false;
+  const keys = Object.keys(payload);
+  return keys.every((key) => key === "defaultPath" || key === "startLocation")
+    && (payload.defaultPath === undefined || typeof payload.defaultPath === "string")
+    && (payload.startLocation === undefined || payload.startLocation === "desktop" || payload.startLocation === "home");
 }
 
 function createNativeBridgeHandler(internals = {}) {
@@ -56,11 +81,11 @@ function createNativeBridgeHandler(internals = {}) {
       if (endpoint !== PICK_DIRECTORY_ENDPOINT && endpoint !== ALLOCATE_DEFAULT_WORKSPACE_ENDPOINT) {
         throw new Error(`dsh-projects: unknown native bridge endpoint ${JSON.stringify(endpoint)}`);
       }
-      if (!isPlainObject(payload) || Object.keys(payload).length !== 0) {
-        throw new Error("dsh-projects: bridge payload must be an empty object");
+      if (!validPickerPayload(payload)) {
+        throw new Error("dsh-projects: bridge payload may only contain defaultPath and a desktop/home startLocation");
       }
       if (endpoint === PICK_DIRECTORY_ENDPOINT) {
-        const path = await pickNativeDirectory(signal, internals);
+        const path = await pickNativeDirectory(signal, internals, payload);
         return { ok: true, value: { path } };
       }
       if (endpoint === ALLOCATE_DEFAULT_WORKSPACE_ENDPOINT) {
@@ -95,6 +120,7 @@ export {
   BRIDGE_CHANNEL,
   PICK_DIRECTORY_ENDPOINT,
   createNativeBridgeHandler,
+  existingDirectory,
   isElectronRuntime,
   pickNativeDirectory,
   pickWithDshNative,

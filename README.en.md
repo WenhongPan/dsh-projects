@@ -22,9 +22,10 @@ DSH makes it easy to enter a Workspace, but folder selection and a flat session 
 | --- | --- |
 | Project entry | Search and switch projects above the composer, or start without choosing one |
 | Project creation | Keep display names independent from folders and prefer the OS directory chooser locally |
-| Sidebar | Group by project or use one list, with Recent, pinning, favorites, and drag ordering |
+| Sidebar | Group by project or use one list, with Recent, pinning, favorites, drag ordering, plus Off, Compact, or Expanded Session-status summaries |
 | Management | Rename, open in the file manager, archive chats, and remove project registrations |
-| Global search | Search projects and chat titles; optionally include chat bodies through DSH indexing |
+| Multi-folder projects | Optionally group existing Workspaces under one project without moving files or chats; dissolve the group at any time |
+| Global search | Group results directly by project; optionally include chat bodies through DSH indexing |
 | Archive center | Inspect archived chats; restore depends on a public DSH unarchive API |
 | Theme and data | Follow DSH light/dark themes and keep using DSH's own Workspace and Session data |
 
@@ -68,6 +69,7 @@ On Windows, a link path can be written as `link:C:/path/to/dsh-projects`.
 The plugin includes its own native directory bridge, so regular users do not need to replace Desktop:
 
 - DSH Desktop opens Electron's operating-system directory chooser.
+- The first chooser starts on the system Desktop; later opens can remember the last project's parent or use Desktop, Home, or the current project's parent.
 - Local Web UI on the same machine delegates to DSH's official cross-platform native picker.
 - Remote Web UI and failures fall back to DSH's in-app Host directory browser.
 
@@ -112,7 +114,7 @@ The index contains data derived from chat content and should receive the same pr
 
 ## Data and uninstalling
 
-The plugin does not create a second project database, and uninstalling it does not delete folders or session logs. Grouping, ordering, pins, and favorites are browser-local display preferences stored in `localStorage`; clearing site data only resets those preferences.
+Basic mode does not create a second project database, and uninstalling the plugin does not delete folders or session logs. Grouping, ordering, pins, and favorites are browser-local preferences stored in `localStorage`. The optional multi-folder layer stores only its label, Workspace IDs, and primary Workspace ID there; it does not store chat bodies or move files. Clearing site data dissolves local groups without changing DSH Workspaces, Sessions, or project files.
 
 ## Development and feedback
 
