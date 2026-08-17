@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Installation and compatibility documentation
+    url: https://github.com/WenhongPan/dsh-projects/blob/main/docs/compatibility.md
+    about: Check the currently verified environments and known limitations first.

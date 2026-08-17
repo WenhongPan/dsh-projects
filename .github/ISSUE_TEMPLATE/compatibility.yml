@@ -1,0 +1,63 @@
+name: Compatibility report
+description: Confirm a working or failing platform/profile combination.
+title: "[Compatibility]: "
+body:
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Outcome
+      options:
+        - Works as expected
+        - Works with limitations
+        - Does not work
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: dsh-projects version
+    validations:
+      required: true
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DeepSeek Harness version
+    validations:
+      required: true
+  - type: input
+    id: desktop-version
+    attributes:
+      label: DSH Desktop version
+      description: Leave blank for Web UI reports.
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+      placeholder: macOS 15 arm64
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - DSH Desktop
+        - Local Web UI
+        - Remote Web UI
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Behaviors tested
+      options:
+        - label: Install and restart
+        - label: Select an existing project
+        - label: Create a project and choose its exact root folder
+        - label: Start a regular chat without choosing a project
+        - label: Search and sidebar organization
+        - label: Disable or uninstall
+  - type: textarea
+    id: notes
+    attributes:
+      label: Limitations or notes

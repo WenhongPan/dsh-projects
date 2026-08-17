@@ -5,6 +5,7 @@ All notable changes to this project will be documented here.
 ## Unreleased
 
 - Add Arrow Up/Down and Enter navigation to the project picker, including active-option accessibility metadata.
+- Add structured bug, compatibility, and feature-request forms plus a public product roadmap.
 
 ## 0.2.0-alpha.2 - 2026-08-17
 

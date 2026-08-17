@@ -122,7 +122,9 @@ npm run verify
 npm pack --dry-run
 ```
 
-This is an alpha release. Please open an [Issue](https://github.com/WenhongPan/dsh-projects/issues) for compatibility problems, ideas, and especially new platform test results. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md) for contribution and release details.
+This is an alpha. Use the structured forms to report a [bug](https://github.com/WenhongPan/dsh-projects/issues/new?template=bug.yml), share a [platform compatibility result](https://github.com/WenhongPan/dsh-projects/issues/new?template=compatibility.yml), or propose a [feature](https://github.com/WenhongPan/dsh-projects/issues/new?template=feature.yml). Remove private paths, prompts, and credentials before submitting.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance, [CHANGELOG.md](CHANGELOG.md) for release history, and the public [roadmap](docs/roadmap.md) for possible next steps.
 
 ## License
 

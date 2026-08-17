@@ -1,0 +1,32 @@
+name: Feature request
+description: Describe a project or session workflow that needs improvement.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Current workflow
+      description: What are you trying to do, and where does it become difficult?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Smallest useful change
+      description: Describe the minimum behavior that would solve the problem.
+    validations:
+      required: true
+  - type: dropdown
+    id: data
+    attributes:
+      label: Does this require moving, copying, or deleting user data?
+      options:
+        - No
+        - Unsure
+        - Yes
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or existing plugins considered

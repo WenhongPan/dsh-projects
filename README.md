@@ -122,7 +122,9 @@ npm run verify
 npm pack --dry-run
 ```
 
-这是 Alpha 版本。遇到兼容问题或有新想法，欢迎提交 [Issue](https://github.com/WenhongPan/dsh-projects/issues)；平台验证结果尤其有帮助。贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)。
+这是 Alpha 版本。遇到问题可以提交[缺陷报告](https://github.com/WenhongPan/dsh-projects/issues/new?template=bug.yml)，也欢迎填写[平台兼容性报告](https://github.com/WenhongPan/dsh-projects/issues/new?template=compatibility.yml)或提出[功能建议](https://github.com/WenhongPan/dsh-projects/issues/new?template=feature.yml)。提交前请移除私密路径、提示词和凭据。
+
+贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)，后续方向见[公开路线图](docs/roadmap.md)。
 
 ## 许可证
 
