@@ -11,9 +11,9 @@ Removing the plugin therefore restores the stock DSH surfaces without deleting p
 
 ## Runtime halves
 
-`src/index.js` registers a generic Connection RPC channel at `/dsh-projects`. The channel uses `authority: loopback`, accepts only an empty `pickDirectory` request, and returns a selected absolute Host path or `null`. `src/client.cjs` contributes the project picker and sidebar UI. `build.mjs` bundles the browser source and wraps it for the DSH module loader as `dist/client.js`.
+`src/index.js` registers a generic Connection RPC channel at `/dsh-projects`. The channel uses `authority: loopback` and owns two empty-payload endpoints: `pickDirectory` returns a selected absolute Host path or `null`, while `allocateDefaultWorkspace` atomically creates a dated ordinary-chat directory. `src/client.cjs` contributes the project picker and sidebar UI. `build.mjs` bundles the browser source and wraps it for the DSH module loader as `dist/client.js`.
 
-Inside Electron, the bridge calls `dialog.showOpenDialog()` in the existing main process. In an ordinary local Web Host it delegates to `@deepseek-ai/dsh-host-directory-picker-native`. Non-loopback pages never call the bridge; any bridge failure falls back to the stock Workspace picker and then the plugin's directory browser.
+Inside Electron, the bridge calls `dialog.showOpenDialog()` in the existing main process. In an ordinary local Web Host it delegates to `@deepseek-ai/dsh-host-directory-picker-native`. Non-loopback pages never call the bridge; project selection falls back to the stock Workspace picker and then the plugin's directory browser.
 
 ## Default chats
 
@@ -28,7 +28,7 @@ home/
         new-chat-2/
 ```
 
-Generated Workspaces are hidden from the project list and their sessions appear under Recent. Directory creation is retried to handle concurrent allocation.
+Generated Workspaces are hidden from the project list and their sessions appear under Recent. On Desktop and local loopback Web, allocation runs on the Host with Node filesystem APIs, so it does not depend on whether the composed directory picker serves `native` or `browse`. Remote Web uses the Workspace browse capability on its Host. Directory creation is retried to handle concurrent allocation.
 
 ## Compatibility boundaries
 

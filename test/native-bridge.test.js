@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ALLOCATE_DEFAULT_WORKSPACE_ENDPOINT,
   BRIDGE_CHANNEL,
   createNativeBridgeHandler,
   isElectronRuntime,
@@ -57,17 +58,49 @@ test("plain Node hosts delegate to the official cross-platform DSH picker", asyn
 });
 
 test("bridge accepts only its empty pickDirectory request", async () => {
+  const expectRoot = "C:\\Users\\Public\\Documents\\DSH-Default";
+  const expectPath = `${expectRoot}\\2026-08-17\\new-chat`;
   const handler = createNativeBridgeHandler({
     platform: "darwin",
     electron: false,
-    loadNativePicker: async () => ({ pickNativeDirectory: async () => "/tmp/project" })
+    loadNativePicker: async () => ({ pickNativeDirectory: async () => "/tmp/project" }),
+    defaultWorkspace: {
+      home: "C:\\Users\\Public",
+      now: () => new Date(2026, 7, 17, 12, 0),
+      join: (...parts) => parts.join("\\"),
+      mkdir: async () => {}
+    }
   });
   assert.deepEqual(await handler("pickDirectory", {}, new AbortController().signal), {
     ok: true,
     value: { path: "/tmp/project" }
   });
-  await assert.rejects(() => handler("other", {}, new AbortController().signal), /unknown native bridge endpoint/);
-  await assert.rejects(() => handler("pickDirectory", { path: "/tmp" }, new AbortController().signal), /empty object/);
+  assert.deepEqual(
+    await handler(ALLOCATE_DEFAULT_WORKSPACE_ENDPOINT, {}, new AbortController().signal),
+    {
+      ok: true,
+      value: {
+        path: expectPath,
+        root: expectRoot
+      }
+    }
+  );
+  assert.deepEqual(await handler("other", {}, new AbortController().signal), {
+    ok: false,
+    error: {
+      code: "internal",
+      message: 'dsh-projects: unknown native bridge endpoint "other"',
+      details: {}
+    }
+  });
+  assert.deepEqual(await handler("pickDirectory", { path: "/tmp" }, new AbortController().signal), {
+    ok: false,
+    error: {
+      code: "internal",
+      message: "dsh-projects: bridge payload must be an empty object",
+      details: {}
+    }
+  });
 });
 
 test("registers the bridge as a loopback-only RPC channel", () => {

@@ -48,7 +48,7 @@ def rounded_image(image: Image.Image, radius: int) -> Image.Image:
     return result
 
 
-def build_social_preview(home: Image.Image, output: Path) -> None:
+def build_social_preview(picker: Image.Image, output: Path) -> None:
     canvas = Image.new("RGB", (1280, 640), "#101216")
     draw = ImageDraw.Draw(canvas)
 
@@ -61,20 +61,26 @@ def build_social_preview(home: Image.Image, output: Path) -> None:
         )
         draw.line((x, 0, x, 640), fill=color)
 
-    clean_home = home.crop((0, 0, home.width, home.height - 36))
-    screenshot = clean_home.resize((740, 467), Image.Resampling.LANCZOS)
-    screenshot = rounded_image(screenshot, 18)
+    # Lead with the real project picker rather than a distant full-app view.
+    # The crop keeps Project Atlas, the project-first menu, and the composer at
+    # a readable size in GitHub's 1280 x 640 social-preview viewport.
+    project_flow = picker.crop((175, 300, 820, 725))
+    screenshot = project_flow.resize((660, 435), Image.Resampling.LANCZOS)
+    screenshot = rounded_image(screenshot, 20)
     shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     shadow_draw = ImageDraw.Draw(shadow)
-    shadow_draw.rounded_rectangle((502, 76, 1258, 559), radius=20, fill=(0, 0, 0, 145))
+    shadow_draw.rounded_rectangle((570, 91, 1250, 546), radius=24, fill=(0, 0, 0, 160))
     shadow = shadow.filter(ImageFilter.GaussianBlur(16))
     canvas = Image.alpha_composite(canvas.convert("RGBA"), shadow)
-    canvas.alpha_composite(screenshot, (510, 84))
+    canvas.alpha_composite(screenshot, (578, 99))
 
     draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle((578, 56, 765, 84), radius=14, fill="#1f2b40")
+    draw.ellipse((592, 66, 600, 74), fill="#82b2ff")
+    draw.text((610, 61), "PROJECT WORKFLOW", font=font(13, bold=True), fill="#bad4ff")
     draw.rounded_rectangle((58, 58, 202, 91), radius=16, fill="#25324a")
     draw.text((79, 65), "DSH PLUGIN", font=font(15, bold=True), fill="#a9c9ff")
-    draw.text((58, 134), "dsh-projects", font=font(58, bold=True), fill="#f6f7fb")
+    draw.text((58, 134), "dsh-projects", font=font(54, bold=True), fill="#f6f7fb")
     draw.text((60, 220), "Projects that stay", font=font(30, bold=True), fill="#dce4f2")
     draw.text((60, 259), "organized.", font=font(30, bold=True), fill="#8bb7ff")
     draw.multiline_text(
@@ -114,7 +120,7 @@ def main() -> None:
             method=6,
         )
 
-    build_social_preview(source["home"], args.output / "social-preview.png")
+    build_social_preview(source["picker"], args.output / "social-preview.png")
 
     sequence = [
         source["home"],

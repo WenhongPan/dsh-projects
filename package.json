@@ -12,6 +12,7 @@
   "files": [
     "dist/client.js",
     "src/index.js",
+    "src/default-workspace-host.js",
     "src/native-bridge.js",
     "cordis.patch.yml",
     "README.md",
@@ -27,7 +28,7 @@
   ],
   "scripts": {
     "build": "node build.mjs",
-    "check": "node --check src/client.cjs && node --check src/index.js && node --check src/native-bridge.js && node --check src/core/default-workspace.cjs && node --check src/core/native-picker-result.cjs",
+    "check": "node --check src/client.cjs && node --check src/index.js && node --check src/default-workspace-host.js && node --check src/native-bridge.js && node --check src/core/default-workspace.cjs && node --check src/core/native-picker-result.cjs",
     "test": "node --test",
     "verify": "npm run check && npm run build && npm test",
     "prepack": "npm run verify"

@@ -6,7 +6,8 @@ const {
   isPathInside,
   isPortableDefaultPath,
   localDateSegment,
-  nextSessionFolderName
+  nextSessionFolderName,
+  unwrapDefaultWorkspaceResult
 } = require("../src/core/default-workspace.cjs");
 
 test("allocates stable local date segments", () => {
@@ -63,4 +64,29 @@ test("creates home/Documents/DSH-Default/date and stores the discovered root", a
     "/home/me/Documents/DSH-Default/2026-08-17/new-chat"
   );
   assert.equal(storage.get(DEFAULT_ROOT_KEY), "/home/me/Documents/DSH-Default");
+});
+
+test("remembers a Host-allocated root and unwraps its RPC envelope", () => {
+  const storage = new Map();
+  const manager = createDefaultWorkspaceManager({
+    workspaces: {},
+    storage: {
+      getItem: (key) => storage.get(key) || null,
+      setItem: (key, value) => storage.set(key, value)
+    }
+  });
+  const allocation = unwrapDefaultWorkspaceResult({
+    ok: true,
+    value: {
+      path: "/home/demo/Documents/DSH-Default/2026-08-17/new-chat",
+      root: "/home/demo/Documents/DSH-Default"
+    }
+  });
+  manager.rememberRoot(allocation.root);
+  assert.equal(storage.get(DEFAULT_ROOT_KEY), "/home/demo/Documents/DSH-Default");
+  assert.throws(() => unwrapDefaultWorkspaceResult({ ok: true, value: {} }), /invalid success result/);
+  assert.throws(
+    () => unwrapDefaultWorkspaceResult({ ok: false, error: { message: "allocation failed" } }),
+    /allocation failed/
+  );
 });

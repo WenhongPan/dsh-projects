@@ -18,7 +18,7 @@ DSH Desktop currently publishes installers for Windows x64 and macOS Apple Silic
 | Feature | Desktop / Windows | Local Web | Remote Web |
 | --- | --- | --- | --- |
 | Project picker and sidebar | Yes | Yes | Yes |
-| No-project default task folders | Yes | Yes | Yes, on the Host |
+| No-project default task folders | Host-side allocator | Host-side allocator | Workspace browse capability on the Host |
 | Plugin native bridge | Electron OS chooser | DSH native Host picker | Disabled |
 | Fallback directory browser | Yes | Yes | Yes; authoritative |
 | Open in file manager | Verified on Windows | Host-dependent | Host-dependent |
