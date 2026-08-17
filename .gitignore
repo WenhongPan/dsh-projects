@@ -4,6 +4,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 coverage/
+__pycache__/
 /DSH-Desktop-*-Setup.exe
 /SHA256SUMS.txt
 /docs/assets/demo-*.png

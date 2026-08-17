@@ -8,7 +8,11 @@ English · [简体中文](README.md)
 [![CI](https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml/badge.svg)](https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/WenhongPan/dsh-projects)](LICENSE)
 
+![dsh-projects: a project-first workflow for DeepSeek Harness](docs/assets/social-preview.png)
+
 ![dsh-projects project picker, create-project dialog, and native Windows folder picker](docs/assets/demo.gif)
+
+> Full-screen, real interaction capture. The directory chooser is opened by the Windows native API; editing is limited to cropping, camera zoom, and GIF compression—no system UI was reconstructed.
 
 DSH makes it easy to enter a Workspace, but folder selection and a flat session list become difficult to navigate as your work grows. `dsh-projects` adds a project layer over DSH's native Workspace and Session data: select and create projects, organize the sidebar, search chats, and inspect archived work without copying or migrating existing sessions.
 

@@ -21,6 +21,7 @@
     "SECURITY.md",
     "docs/*.md",
     "docs/assets/demo.gif",
+    "docs/assets/social-preview.png",
     "docs/assets/picker.webp",
     "docs/assets/create.webp",
     "docs/assets/native.webp",

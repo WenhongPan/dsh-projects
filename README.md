@@ -8,7 +8,11 @@
 [![CI](https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml/badge.svg)](https://github.com/WenhongPan/dsh-projects/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/WenhongPan/dsh-projects)](LICENSE)
 
+![dsh-projects：为 DeepSeek Harness 提供项目化工作流](docs/assets/social-preview.png)
+
 ![dsh-projects：选择项目、创建项目并打开 Windows 原生目录窗口](docs/assets/demo.gif)
+
+> 全屏真实录制：目录窗口由 Windows 原生接口直接打开；画面仅做裁切、镜头缩放和 GIF 压缩，没有重绘系统界面。
 
 DSH 原生界面擅长直接进入 Workspace，但项目多起来以后，目录选择和会话列表很快会变得混乱。`dsh-projects` 在 DSH 原生 Workspace/Session 数据之上增加一层项目体验：选择项目、创建项目、整理侧边栏、搜索聊天和查看归档内容，不复制或迁移已有会话。
 
