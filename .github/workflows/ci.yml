@@ -37,8 +37,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Install the selected DSH peer line
+      - name: Install and verify the selected DSH peer line
         run: |
+          peer_root="$RUNNER_TEMP/dsh-peer-${{ matrix.dsh }}"
+          mkdir -p "$peer_root"
+          cd "$peer_root"
+          npm init --yes
           npm install --no-save --package-lock=false --ignore-scripts --legacy-peer-deps \
             @deepseek-ai/dsh-client-connection@${{ matrix.dsh }} \
             @deepseek-ai/dsh-client-locale@${{ matrix.dsh }} \
@@ -48,6 +52,5 @@ jobs:
             @deepseek-ai/dsh-client-ui-slots@${{ matrix.dsh }} \
             @deepseek-ai/dsh-client-ui-workspace@${{ matrix.dsh }} \
             @deepseek-ai/dsh-host-directory-picker-native@${{ matrix.dsh }}
-      - name: Verify resolved peer versions and package ranges
-        run: node scripts/assert-dsh-peer-line.mjs ${{ matrix.dsh }}
+          node "$GITHUB_WORKSPACE/scripts/assert-dsh-peer-line.mjs" ${{ matrix.dsh }}
       - run: npm run verify
