@@ -15,10 +15,12 @@ test("unwraps the Connection RPC success envelope without triggering a fallback"
 
 test("preserves cancellation from the native picker", () => {
   assert.equal(unwrapNativeDirectoryResult({ ok: true, value: { path: null } }), null);
+  assert.equal(unwrapNativeDirectoryResult(null), null);
 });
 
 test("keeps compatibility with a direct directory result", () => {
   assert.equal(unwrapNativeDirectoryResult({ path: "/tmp/project" }), "/tmp/project");
+  assert.equal(unwrapNativeDirectoryResult("C:\\Users\\Public\\Documents\\DSH-Showcase\\Nova-Studio"), "C:\\Users\\Public\\Documents\\DSH-Showcase\\Nova-Studio");
 });
 
 test("surfaces RPC and malformed-result failures", () => {

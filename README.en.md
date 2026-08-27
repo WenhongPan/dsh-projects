@@ -55,18 +55,18 @@ Every advanced capability is opt-in. Without it, the plugin remains a lightweigh
 
 ## Quick install
 
-The current version is `0.3.0-alpha.1`. Windows x64 with DSH Desktop 2.0.1 and DeepSeek Harness 0.1.0-rc.6 is the primary verified environment.
+The current version is `0.3.0-alpha.2`. The plugin accepts both the DSH `0.1.0-rc.6` line and `0.1.1-rc.2`. The latter has passed an isolated Web UI boot and core-surface check, and DSH Desktop 2.0.3's official Windows picker has passed a manual UI check. See the [compatibility matrix](docs/compatibility.md) for the remaining platform boundaries.
 
 ### DSH Desktop
 
 ```powershell
-dsh plugin --profile desktop add https://github.com/WenhongPan/dsh-projects/releases/download/v0.3.0-alpha.1/dsh-projects-0.3.0-alpha.1.tgz
+dsh plugin --profile desktop add https://github.com/WenhongPan/dsh-projects/releases/download/v0.3.0-alpha.2/dsh-projects-0.3.0-alpha.2.tgz
 ```
 
 ### DSH Web UI
 
 ```bash
-dsh plugin --profile web add https://github.com/WenhongPan/dsh-projects/releases/download/v0.3.0-alpha.1/dsh-projects-0.3.0-alpha.1.tgz
+dsh plugin --profile web add https://github.com/WenhongPan/dsh-projects/releases/download/v0.3.0-alpha.2/dsh-projects-0.3.0-alpha.2.tgz
 ```
 
 Fully quit and restart the selected DSH profile after installation or upgrade. Desktop and Web are separate profiles and must be installed independently.
@@ -85,14 +85,15 @@ On Windows, a link path can be written as `link:C:/path/to/dsh-projects`.
 
 ## Native folder picking
 
-The plugin includes its own native directory bridge, so regular users do not need to replace Desktop:
+The plugin selects the best directory surface exposed by the current runtime, so regular users do not need to replace Desktop:
 
-- DSH Desktop opens Electron's operating-system directory chooser.
-- The first chooser starts on the system Desktop; later opens can remember the last project's parent or use Desktop, Home, or the current project's parent.
-- Local Web UI on the same machine delegates to DSH's official cross-platform native picker.
-- Remote Web UI and failures fall back to DSH's in-app Host directory browser.
+- DSH Desktop 2.0.3 and later use the official Desktop-owned Windows picker first.
+- Older Desktop builds and local Web UI retain the plugin Host bridge, including remembered-parent and Desktop/Home start options.
+- If neither bridge is available, the plugin calls DSH's stock Workspace picker.
+- Remote Web UI uses the Host-side in-app browser and never asks the remote machine to show a system dialog.
+- Cancellation is final and never opens a second chooser by mistake.
 
-An optional **patched DSH Desktop** build is available in Releases for users who want every compatible plugin to receive a Desktop-level native picker. It is not required by `dsh-projects`. See [native picker options](docs/native-picker-options.md) for the trade-offs and checksum instructions.
+The patched Desktop installer in early Releases has been superseded by the official implementation. It remains as historical compatibility material and is no longer recommended for new installations. See [native picker options](docs/native-picker-options.md) for the exact fallback order.
 
 ![Native Windows directory chooser](docs/assets/native.webp)
 
@@ -110,8 +111,9 @@ Default tasks stay out of the Projects section but remain available in Recent. E
 
 | Surface | Current status |
 | --- | --- |
-| DSH Desktop 2.0.1 / Windows x64 | ✅ Manually verified, including the native directory chooser |
-| Local DSH Web UI / Windows | 🟡 Designed to work; more manual regression coverage is needed |
+| DSH Desktop 2.0.1 / Windows x64 | ✅ Legacy bridge manually verified, including the native directory chooser |
+| DSH Desktop 2.0.3 / Windows x64 | ✅ Plugin load, official picker, cancellation, and CJK/space path round-trip manually checked |
+| DSH 0.1.1-rc.2 local Web UI / Windows | ✅ Isolated boot, plugin load, and core surfaces checked |
 | DSH Desktop / macOS Apple Silicon | 🟡 CI passes; native picker and file-manager actions need manual coverage |
 | Local Web UI / macOS and Linux | 🟡 CI passes; Host paths and local directory rules need manual coverage |
 | Remote Web UI | ✅ Uses the Host-side in-app browser and never opens an OS dialog remotely |

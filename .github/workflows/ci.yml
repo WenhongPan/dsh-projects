@@ -23,3 +23,31 @@ jobs:
       - run: npm ci
       - run: npm run verify
       - run: npm pack --dry-run
+
+  dsh-peer-lines:
+    name: DSH ${{ matrix.dsh }} peers
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dsh: [0.1.0-rc.6, 0.1.1-rc.2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install the selected DSH peer line
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --legacy-peer-deps \
+            @deepseek-ai/dsh-client-connection@${{ matrix.dsh }} \
+            @deepseek-ai/dsh-client-locale@${{ matrix.dsh }} \
+            @deepseek-ai/dsh-client-runtime@${{ matrix.dsh }} \
+            @deepseek-ai/dsh-client-ui-conversation@${{ matrix.dsh }} \
+            @deepseek-ai/dsh-client-ui-sidebar@${{ matrix.dsh }} \
+            @deepseek-ai/dsh-client-ui-slots@${{ matrix.dsh }} \
+            @deepseek-ai/dsh-client-ui-workspace@${{ matrix.dsh }} \
+            @deepseek-ai/dsh-host-directory-picker-native@${{ matrix.dsh }}
+      - name: Verify resolved peer versions and package ranges
+        run: node scripts/assert-dsh-peer-line.mjs ${{ matrix.dsh }}
+      - run: npm run verify

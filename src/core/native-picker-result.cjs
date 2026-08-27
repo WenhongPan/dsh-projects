@@ -7,6 +7,8 @@ function isDirectoryPathResult(value) {
 function unwrapNativeDirectoryResult(result) {
   // Connection RPC returns a Result envelope. Keep accepting the direct shape
   // as well so older in-process hosts and test fixtures remain compatible.
+  if (result === null) return null;
+  if (typeof result === "string") return result;
   if (isDirectoryPathResult(result)) return result.path;
 
   if (result !== null && typeof result === "object" && result.ok === true) {

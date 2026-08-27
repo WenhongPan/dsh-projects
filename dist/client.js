@@ -130,7 +130,9 @@ var require_native_picker_result = __commonJS({
     function isDirectoryPathResult(value) {
       return value !== null && typeof value === "object" && (typeof value.path === "string" || value.path === null);
     }
-    function unwrapNativeDirectoryResult2(result) {
+    function unwrapNativeDirectoryResult(result) {
+      if (result === null) return null;
+      if (typeof result === "string") return result;
       if (isDirectoryPathResult(result)) return result.path;
       if (result !== null && typeof result === "object" && result.ok === true) {
         if (isDirectoryPathResult(result.value)) return result.value.path;
@@ -142,7 +144,44 @@ var require_native_picker_result = __commonJS({
       }
       throw new Error("native directory bridge returned an invalid result");
     }
-    module2.exports = { unwrapNativeDirectoryResult: unwrapNativeDirectoryResult2 };
+    module2.exports = { unwrapNativeDirectoryResult };
+  }
+});
+
+// src/core/directory-picker-strategy.cjs
+var require_directory_picker_strategy = __commonJS({
+  "src/core/directory-picker-strategy.cjs"(exports2, module2) {
+    var { unwrapNativeDirectoryResult } = require_native_picker_result();
+    async function callPicker(picker) {
+      return unwrapNativeDirectoryResult(await picker());
+    }
+    async function pickProjectDirectory2({
+      desktopPicker,
+      legacyPicker,
+      workspacePicker,
+      onFallback = () => {
+      }
+    } = {}) {
+      let lastFailure = null;
+      for (const [source, picker] of [
+        ["desktop", desktopPicker],
+        ["legacy", legacyPicker]
+      ]) {
+        if (typeof picker !== "function") continue;
+        try {
+          return await callPicker(picker);
+        } catch (reason) {
+          lastFailure = reason;
+          onFallback(source, reason);
+        }
+      }
+      if (typeof workspacePicker === "function") {
+        return callPicker(workspacePicker);
+      }
+      if (lastFailure) throw lastFailure;
+      throw new Error("directory picker is unavailable");
+    }
+    module2.exports = { pickProjectDirectory: pickProjectDirectory2 };
   }
 });
 
@@ -316,7 +355,7 @@ var require_session_state = __commonJS({
 var React = require("react");
 var ReactDOM = require("react-dom");
 var { createDefaultWorkspaceManager, unwrapDefaultWorkspaceResult } = require_default_workspace();
-var { unwrapNativeDirectoryResult } = require_native_picker_result();
+var { pickProjectDirectory } = require_directory_picker_strategy();
 var { initialProjectIndex, nextProjectIndex } = require_project_picker();
 var { parentDirectory } = require_picker_history();
 var { composeProjectGroups, createProjectGroupManifest, readProjectGroupManifest, removeProjectGroup, resolveProjectWorkspaceId, upsertProjectGroup } = require_project_groups();
@@ -2348,17 +2387,14 @@ function apply(ctx) {
     const pickerStart = readSidebarPrefs().pickerStart;
     const startLocation = pickerStart === "home" ? "home" : "desktop";
     const defaultPath = pickerStart === "last" ? readPickerParent() : pickerStart === "project-parent" ? parentDirectory(options.currentProjectPath) : "";
-    if (ctx.connection?.isLoopback && ctx.connection?.rpc?.call) {
-      try {
-        const result = await ctx.connection.rpc.call("/dsh-projects", "pickDirectory", { startLocation, ...defaultPath ? { defaultPath } : {} });
-        const selected2 = unwrapNativeDirectoryResult(result);
-        rememberPickerParent(selected2);
-        return selected2;
-      } catch (reason) {
-        console.warn("[dsh-projects] native directory bridge unavailable; falling back", reason);
-      }
-    }
-    const selected = await ctx.workspaces.pickDirectory();
+    const desktopPicker = typeof window.__DSH_DESKTOP_PICK_DIRECTORY__ === "function" ? () => window.__DSH_DESKTOP_PICK_DIRECTORY__() : null;
+    const legacyPicker = ctx.connection?.isLoopback && ctx.connection?.rpc?.call ? () => ctx.connection.rpc.call("/dsh-projects", "pickDirectory", { startLocation, ...defaultPath ? { defaultPath } : {} }) : null;
+    const selected = await pickProjectDirectory({
+      desktopPicker,
+      legacyPicker,
+      workspacePicker: () => ctx.workspaces.pickDirectory(),
+      onFallback: (source, reason) => console.warn(`[dsh-projects] ${source} directory picker unavailable; falling back`, reason)
+    });
     rememberPickerParent(selected);
     return selected;
   };

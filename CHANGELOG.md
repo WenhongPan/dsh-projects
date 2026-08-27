@@ -4,6 +4,16 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+## 0.3.0-alpha.2 - 2026-08-27
+
+- Prefer DSH Desktop's official Windows directory-picker bridge when available, while retaining the plugin Host bridge and stock Workspace picker as compatibility fallbacks.
+- Treat direct string and `null` picker responses as valid results, preventing a successful selection or cancellation from opening a second chooser.
+- Replace the broad prerelease peer caret with the explicit published preview set from `0.1.0-rc.6` through `0.1.1-rc.2`, and add CI checks for the two verified endpoints.
+- Add regression coverage for picker priority, cancellation, fallback order, raw Windows paths, and CJK project paths.
+- Add a repository-owned `screenshots.json` manifest for plugin directories and marketplaces.
+- Retire the patched Desktop installer from the recommended setup path now that Desktop provides an official native Windows picker.
+- Verify plugin loading, native-picker cancellation, and exact CJK/space path round-trip in DSH Desktop 2.0.3 on Windows x64.
+
 ## 0.3.0-alpha.1 - 2026-08-18
 
 - Add Arrow Up/Down and Enter navigation to the project picker, including active-option accessibility metadata.

@@ -1,7 +1,7 @@
     const React = require("react");
     const ReactDOM = require("react-dom");
     const { createDefaultWorkspaceManager, unwrapDefaultWorkspaceResult } = require("./core/default-workspace.cjs");
-    const { unwrapNativeDirectoryResult } = require("./core/native-picker-result.cjs");
+    const { pickProjectDirectory } = require("./core/directory-picker-strategy.cjs");
     const { initialProjectIndex, nextProjectIndex } = require("./core/project-picker.cjs");
     const { parentDirectory } = require("./core/picker-history.cjs");
     const { composeProjectGroups, createProjectGroupManifest, readProjectGroupManifest, removeProjectGroup, resolveProjectWorkspaceId, upsertProjectGroup } = require("./core/project-groups.cjs");
@@ -1797,17 +1797,18 @@
           : pickerStart === "project-parent"
             ? parentDirectory(options.currentProjectPath)
             : "";
-        if (ctx.connection?.isLoopback && ctx.connection?.rpc?.call) {
-          try {
-            const result = await ctx.connection.rpc.call("/dsh-projects", "pickDirectory", { startLocation, ...(defaultPath ? { defaultPath } : {}) });
-            const selected = unwrapNativeDirectoryResult(result);
-            rememberPickerParent(selected);
-            return selected;
-          } catch (reason) {
-            console.warn("[dsh-projects] native directory bridge unavailable; falling back", reason);
-          }
-        }
-        const selected = await ctx.workspaces.pickDirectory();
+        const desktopPicker = typeof window.__DSH_DESKTOP_PICK_DIRECTORY__ === "function"
+          ? () => window.__DSH_DESKTOP_PICK_DIRECTORY__()
+          : null;
+        const legacyPicker = ctx.connection?.isLoopback && ctx.connection?.rpc?.call
+          ? () => ctx.connection.rpc.call("/dsh-projects", "pickDirectory", { startLocation, ...(defaultPath ? { defaultPath } : {}) })
+          : null;
+        const selected = await pickProjectDirectory({
+          desktopPicker,
+          legacyPicker,
+          workspacePicker: () => ctx.workspaces.pickDirectory(),
+          onFallback: (source, reason) => console.warn(`[dsh-projects] ${source} directory picker unavailable; falling back`, reason)
+        });
         rememberPickerParent(selected);
         return selected;
       };
